@@ -300,7 +300,7 @@ def train_SCST(train_loader, encoder, decoder, criterion, encoder_optimizer, dec
 
         # Forward prop.
         imgs = encoder(imgs)
-        scores, caps_sorted, decode_lengths, alphas, sort_ind = decoder(imgs, caps, caplens)
+        get_hypothesis_greedy(imgs, caps, caplens)
 
         # Since we decoded starting with <start>, the targets are all words after <start>, up to <end>
         targets = caps_sorted[:, 1:]
