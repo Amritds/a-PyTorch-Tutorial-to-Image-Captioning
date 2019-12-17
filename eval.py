@@ -181,7 +181,7 @@ def get_captions_and_hypothesis(image, caps, caplens, allcaps):
     return (img_captions, hyp)
 
 
-def get_hypothesis_greedy(encoder_out, caps, caplens):
+def get_hypothesis_greedy(encoder_out):
     
     batch_size = encoder_out.size(0)
     encoder_dim = encoder_out.size(-1)
@@ -193,12 +193,12 @@ def get_hypothesis_greedy(encoder_out, caps, caplens):
     # Tensor to store the previous word at each step; now it is just <start>
     prev_words = torch.LongTensor([[word_map['<start>']]] * batch_size).to(device)  # (batch_size, 1)
 
-    # Tensor to store generated sequence; now it is just <start>
+    # Tensor to store generated sequences; now it is just <start>
     seqs = prev_words  # (batch_size, 1)
 
     # Start decoding
     step = 1
-    h, c = decoder.init_hidden_state(encoder_out)
+    H, C = decoder.init_hidden_state(encoder_out)
 
     # Keep track of sum top scores for the REINFORCE algorithm.
     sum_top_scores = torch.zeros(batch_size)
@@ -206,16 +206,19 @@ def get_hypothesis_greedy(encoder_out, caps, caplens):
     # Note: Batch size changes as generated sequences come to an <end>. 
     while True:
 
-        embeddings = decoder.embedding(prev_words).squeeze(1)  # (batch_size, embed_dim)
+    	# Update the indexes of sequences that are incomplete.
+        incomplete_inds = [ind for ind, last_word in enumerate(seqs[:,-1]) if last_word != word_map['<end>']]
 
-        awe, _ = decoder.attention(encoder_out, h)  # (batch_size, encoder_dim), (batch_size, num_pixels)
+        embeddings = decoder.embedding(prev_words[incomplete_inds]).squeeze(1)  # (batch_size, embed_dim)
 
-        gate = decoder.sigmoid(decoder.f_beta(h))  # gating scalar, (batch_size, encoder_dim)
+        awe, _ = decoder.attention(encoder_out[incomplete_inds], H[incomplete_inds])  # (batch_size, encoder_dim), (batch_size, num_pixels)
+
+        gate = decoder.sigmoid(decoder.f_beta(H[incomplete_inds]))  # gating scalar, (batch_size, encoder_dim)
         awe = gate * awe
 
-        h, c = decoder.decode_step(torch.cat([embeddings, awe], dim=1), (h, c))  # (batch_size, decoder_dim)
+        H[incomplete_inds], C[incomplete_inds] = decoder.decode_step(torch.cat([embeddings, awe], dim=1), (H[incomplete_inds], C[incomplete_inds]))  # (batch_size, decoder_dim)
 
-        scores = decoder.fc(h)  # (batch_size, vocab_size)
+        scores = decoder.fc(H[incomplete_inds])  # (batch_size, vocab_size)
         scores = F.log_softmax(scores, dim=1) #(batch_size, vocab_size) 
 
         top_scores, top_words = scores.topk(1, 0, True, True)  # (batch_size) (batch_size)
@@ -226,31 +229,18 @@ def get_hypothesis_greedy(encoder_out, caps, caplens):
         # Add new words to sequences
         seqs[incomplete_inds] = torch.cat([seqs[incomplete_inds], next_word_inds.unsqueeze(1)], dim=1)  # (1, step+1)
 
-        # Update the indexes of sequences that are incomplete.
-        incomplete_inds = [ind for ind, last_word in enumerate(seqs[:,-1]) if last_word != word_map['<end>']]
-
-        # Proceed with incomplete sequences       
+        # sum scores of actions for incomplete sequences       
         sum_top_scores[incomplete_inds] += top_scores # Keep track of sum top scores for the REINFORCE algorithm.
         
-        # CORRECT TILL HERE        ---------------------------------------------------------------------------
-        h = h[incomplete_inds]
-        c = c[incomplete_inds]
-        encoder_out = encoder_out[incomplete_inds]
-        prev_words = next_word_idx 
-        encoder_out = encoder_out[incomplete_inds]
-        prev_words = next_word_inds[incomplete_inds].unsqueeze(1)
-
         # Break if things have been going on too long
         if step > 50:
             break
         step += 1
 
-    i = complete_seqs_scores.index(max(complete_seqs_scores))
-    seq = complete_seqs[i]
+        
+    hypotheses = [[w for w in se if w not in {word_map['<start>'], word_map['<end>'], word_map['<pad>']}] for se in seqs]
 
-    hyp = [w for w in seq if w not in {word_map['<start>'], word_map['<end>'], word_map['<pad>']}]
-
-    return (hyp, sum_top_scores)
+    return (hypotheses, sum_top_scores)
 
 if __name__ == '__main__':
     beam_size = 1

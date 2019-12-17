@@ -6,6 +6,7 @@ import torchvision.transforms as transforms
 from torch import nn
 from torch.nn.utils.rnn import pack_padded_sequence
 from models import Encoder, DecoderWithAttention
+from eval import get_hypothesis_greedy
 from datasets import *
 from utils import *
 from nltk.translate.bleu_score import corpus_bleu
@@ -32,6 +33,7 @@ decoder_lr = 4e-4  # learning rate for decoder
 grad_clip = 5.  # clip gradients at an absolute value of
 alpha_c = 1.  # regularization parameter for 'doubly stochastic attention', as in the paper
 best_bleu4 = 0.  # BLEU-4 score right now
+best_reward = 0. # Avg Reward right now
 print_freq = 100  # print training/validation stats every __ batches
 fine_tune_encoder = False  # fine-tune encoder?
 checkpoint = None  # path to checkpoint, None if none
@@ -40,7 +42,7 @@ checkpoint = None  # path to checkpoint, None if none
 epochs_XE = 120  # number of epochs to train for (if early stopping is not triggered)
 
 # Training parameters (Expected Reward Maximization)
-epochs_SCST = 120  # number of epochs to train for (if early stopping is not triggered)
+epochs_RL = 120  # number of epochs to train for (if early stopping is not triggered)
 
 
 def main():
@@ -117,17 +119,11 @@ def training_epochs(encoder, decoder, encoder_optimizer, decoder_optimizer, trai
 	 				         (2)Maximizing Expected Reward using the SCST algorithm.
 	"""
 
-	global best_bleu4, epochs_since_improvement, checkpoint, start_epoch, fine_tune_encoder, data_name, word_map, epochs_XE, epochs_SCST
+	global best_bleu4, best_reward, epochs_since_improvement, checkpoint, start_epoch, fine_tune_encoder, data_name, word_map, epochs_XE, epochs_RL
 
-    # Choose the correct number of epochs according to training type.
-    if(train_type=='XE'):
-        epochs = epochs_XE
-    else:
-        epochs = epochs_SCST
+ 	for epoch in range(start_epoch, epochs_XE):
 
-	for epoch in range(start_epoch, epochs):
-
-        # Decay learning rate if there is no improvement for 8 consecutive epochs, and terminate training after 20
+    	# Decay learning rate if there is no improvement for 8 consecutive epochs, and terminate training after 20
         if epochs_since_improvement == 20:
             break
         if epochs_since_improvement > 0 and epochs_since_improvement % 8 == 0:
@@ -135,33 +131,21 @@ def training_epochs(encoder, decoder, encoder_optimizer, decoder_optimizer, trai
             if fine_tune_encoder:
                 adjust_learning_rate(encoder_optimizer, 0.8)
 
-        # One epoch's training -------------------------------
-        if(train_type=='XE'):
-
-            # Cross Entropy Loss function
-            criterion = nn.CrossEntropyLoss().to(device)
+        # One epoch's training using the Cross Entropy Loss function ------------------------------------
+        criterion_XE = nn.CrossEntropyLoss().to(device)
             
-            train_XE(train_loader=train_loader,
-                     encoder=encoder,
-                     decoder=decoder,
-                     criterion=criterion,
-                     encoder_optimizer=encoder_optimizer,
-                     decoder_optimizer=decoder_optimizer,
-                     epoch=epoch)
+        train_XE(train_loader=train_loader,
+                 encoder=encoder,
+                 decoder=decoder,
+                 criterion=criterion_XE,
+                 encoder_optimizer=encoder_optimizer,
+                 decoder_optimizer=decoder_optimizer,
+                 epoch=epoch)
 
-        elif(train_type=='SCST'):
-
-            train_SCST(train_loader=train_loader,
-                       encoder=encoder,
-                       decoder=decoder,
-                       criterion=criterion,
-                       encoder_optimizer=encoder_optimizer,
-                       decoder_optimizer=decoder_optimizer,
-                       epoch=epoch)
-        #-----------------------------------------------------
+        #-------------------------------------------------------------------------------------------------
 
         # One epoch's validation
-        recent_bleu4 = validate(val_loader=val_loader,
+        recent_bleu4 = validate_XE(val_loader=val_loader,
                                 encoder=encoder,
                                 decoder=decoder,
                                 criterion=criterion)
@@ -178,6 +162,52 @@ def training_epochs(encoder, decoder, encoder_optimizer, decoder_optimizer, trai
         # Save checkpoint
         save_checkpoint(data_name, epoch, epochs_since_improvement, encoder, decoder, encoder_optimizer,
                         decoder_optimizer, recent_bleu4, is_best)    
+
+    for epoch in range(start_epoch, epochs_RL):
+
+    	# Decay learning rate if there is no improvement for 8 consecutive epochs, and terminate training after 20
+        if epochs_since_improvement == 20:
+            break
+        if epochs_since_improvement > 0 and epochs_since_improvement % 8 == 0:
+            adjust_learning_rate(decoder_optimizer, 0.8)
+            if fine_tune_encoder:
+                adjust_learning_rate(encoder_optimizer, 0.8)
+
+        # One epoch's training maximizing the sum of expected rewards loss function
+		criterion_SCST = RL_loss(image_comparison_reward, scst_baseline).to(device)
+
+        train_RL(train_loader=train_loader,
+                 encoder=encoder,
+                 decoder=decoder,
+                 criterion=criterion_SCST,
+                 encoder_optimizer=encoder_optimizer,
+                 decoder_optimizer=decoder_optimizer,
+                 epoch=epoch)
+
+        #-------------------------------------------------------------------------------------------------
+
+        # One epoch's validation
+        recent_reward = validate_RL(val_loader=val_loader,
+                                	encoder=encoder,
+                                	decoder=decoder,
+                                	criterion=criterion)
+
+        # Check if there was an improvement 
+        is_best = recent_reward > best_reward
+        best_reward = max(recent_reward, best_reward)
+        if not is_best:
+            epochs_since_improvement += 1
+            print("\nEpochs since last improvement: %d\n" % (epochs_since_improvement,))
+        else:
+            epochs_since_improvement = 0
+
+        # Save checkpoint
+        save_checkpoint(data_name, epoch, epochs_since_improvement, encoder, decoder, encoder_optimizer,
+                        decoder_optimizer, recent_bleu4, is_best)  
+
+
+			
+
 
 
 def train_XE(train_loader, encoder, decoder, criterion, encoder_optimizer, decoder_optimizer, epoch):
@@ -213,8 +243,8 @@ def train_XE(train_loader, encoder, decoder, criterion, encoder_optimizer, decod
         caplens = caplens.to(device)
 
         # Forward prop.
-        imgs = encoder(imgs)
-        scores, caps_sorted, decode_lengths, alphas, sort_ind = decoder(imgs, caps, caplens)
+        encoder_out = encoder(imgs)
+        scores, caps_sorted, decode_lengths, alphas, sort_ind = decoder(encoder_out, caps, caplens)
 
         # Since we decoded starting with <start>, the targets are all words after <start>, up to <end>
         targets = caps_sorted[:, 1:]
@@ -257,7 +287,8 @@ def train_XE(train_loader, encoder, decoder, criterion, encoder_optimizer, decod
 
         # Print status
         if i % print_freq == 0:
-            print('Epoch: [{0}][{1}/{2}]\t'
+            print('Maximizing Cross-Entropy\n'
+            	  'Epoch: [{0}][{1}/{2}]\t'
                   'Batch Time {batch_time.val:.3f} ({batch_time.avg:.3f})\t'
                   'Data Load Time {data_time.val:.3f} ({data_time.avg:.3f})\t'
                   'Loss {loss.val:.4f} ({loss.avg:.4f})\t'
@@ -266,7 +297,7 @@ def train_XE(train_loader, encoder, decoder, criterion, encoder_optimizer, decod
                                                                           data_time=data_time, loss=losses,
                                                                           top5=top5accs))
 
-def train_SCST(train_loader, encoder, decoder, criterion, encoder_optimizer, decoder_optimizer, epoch):
+def train_RL(train_loader, encoder, decoder, criterion, encoder_optimizer, decoder_optimizer, epoch):
     """
     Performs one epoch's training for Expected rewards maximization.
 
@@ -279,8 +310,8 @@ def train_SCST(train_loader, encoder, decoder, criterion, encoder_optimizer, dec
     :param epoch: epoch number
     """
 
-    decoder.train()  # train mode (dropout and batchnorm is used)
-    encoder.train()
+    decoder.eval()  # evaluation mode (dropout and batchnorm is not used)
+    encoder.eval()
 
     batch_time = AverageMeter()  # forward prop. + back prop. time
     data_time = AverageMeter()  # data loading time
@@ -299,22 +330,12 @@ def train_SCST(train_loader, encoder, decoder, criterion, encoder_optimizer, dec
         caplens = caplens.to(device)
 
         # Forward prop.
-        imgs = encoder(imgs)
-        get_hypothesis_greedy(imgs, caps, caplens)
-
-        # Since we decoded starting with <start>, the targets are all words after <start>, up to <end>
-        targets = caps_sorted[:, 1:]
-
-        # Remove timesteps that we didn't decode at, or are pads
-        # pack_padded_sequence is an easy trick to do this
-        scores, _ = pack_padded_sequence(scores, decode_lengths, batch_first=True)
-        targets, _ = pack_padded_sequence(targets, decode_lengths, batch_first=True)
+        encoder_out = encoder(imgs)
+        
+        (hypotheses, sum_top_scores) = get_hypothesis_greedy(encoder_out)
 
         # Calculate loss
-        loss = criterion(scores, targets)
-
-        # Add doubly stochastic attention regularization
-        loss += alpha_c * ((1. - alphas.sum(dim=1)) ** 2).mean()
+        loss = criterion(imgs, hypotheses, sum_top_scores)
 
         # Back prop.
         decoder_optimizer.zero_grad()
@@ -343,7 +364,8 @@ def train_SCST(train_loader, encoder, decoder, criterion, encoder_optimizer, dec
 
         # Print status
         if i % print_freq == 0:
-            print('Epoch: [{0}][{1}/{2}]\t'
+            print('Maximizing sum of Expected Rewards\n'
+            	  'Epoch: [{0}][{1}/{2}]\t'
                   'Batch Time {batch_time.val:.3f} ({batch_time.avg:.3f})\t'
                   'Data Load Time {data_time.val:.3f} ({data_time.avg:.3f})\t'
                   'Loss {loss.val:.4f} ({loss.avg:.4f})\t'
@@ -354,7 +376,7 @@ def train_SCST(train_loader, encoder, decoder, criterion, encoder_optimizer, dec
 
 
 
-def validate(val_loader, encoder, decoder, criterion):
+def validate_XE(val_loader, encoder, decoder, criterion):
     """
     Performs one epoch's validation.
 

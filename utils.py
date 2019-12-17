@@ -3,6 +3,7 @@ import numpy as np
 import h5py
 import json
 import torch
+from torch.nn.modules.loss import _Loss
 from scipy.misc import imread, imresize
 from tqdm import tqdm
 from collections import Counter
@@ -284,3 +285,28 @@ def accuracy(scores, targets, k):
     correct = ind.eq(targets.view(-1, 1).expand_as(ind))
     correct_total = correct.view(-1).float().sum()  # 0D tensor
     return correct_total.item() * (100.0 / batch_size)
+
+class RL_loss(_Loss):
+	def __init__(self, reward_function, baseline):
+		
+		super(RL_SCST_loss, self).__init__(size_average=None, reduce=None, reduction='mean')
+		self. reward_function = reward_function
+		self.baseline = baseline
+
+	def forward(self, imgs, hypothesis, sum_top_scores):
+
+		advantage = self.reward_function(imgs, hypothesis) - self.baseline(imgs)
+		weighted_sum_top_scores = advantage * sum_top_scores
+		return ((-1) * weighted_sum_top_scores.mean()) # Important!!! use negative sum of expected rewards to treat as minimization problem. 
+
+def scst_baseline(imgs):
+	"""
+	<stub>: Compute SCST baseline for given images.
+	"""
+	return torch.zeros(imgs.size(0))
+
+def image_comparison_reward(imgs, hypothesis):
+	"""
+	<stub>: Generate images from hypothesis and compare original and recreation.
+	"""
+	return torch.ones(hypothesis.size(0))
