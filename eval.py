@@ -181,7 +181,7 @@ def get_captions_and_hypothesis(image, caps, caplens, allcaps):
     return (img_captions, hyp)
 
 
-def get_hypothesis_greedy(encoder_out):
+def get_hypothesis_greedy(encoder_out, sample=False):
     
     batch_size = encoder_out.size(0)
     encoder_dim = encoder_out.size(-1)
@@ -221,7 +221,15 @@ def get_hypothesis_greedy(encoder_out):
         scores = decoder.fc(H[incomplete_inds])  # (batch_size, vocab_size)
         scores = F.log_softmax(scores, dim=1) #(batch_size, vocab_size) 
 
-        top_scores, top_words = scores.topk(1, 0, True, True)  # (batch_size) (batch_size)
+        if sample:
+        	probs = torch.exp(scores)
+        	categorical_distribution = torch.distributions.Categorical(probs)
+        	
+        	top_words = categorical_distribution.sample() # (batch_size)
+        	top_scores = scores[range(scores.size(0)), top_words] # (batch_size) 
+
+        else:
+        	top_scores, top_words = scores.topk(1, 0, True, True)  # (batch_size) (batch_size)
         
         # Convert unrolled indices to actual indices of scores
         next_word_inds = top_words % vocab_size  # (batch_size)
