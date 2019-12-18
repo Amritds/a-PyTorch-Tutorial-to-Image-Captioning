@@ -480,6 +480,72 @@ def validate_XE(val_loader, encoder, decoder, criterion):
 
     return bleu4
 
+def validate_RL(val_loader, encoder, decoder, criterion):
+    """
+    Performs one epoch's validation.
+
+    :param val_loader: DataLoader for validation data.
+    :param encoder: encoder model
+    :param decoder: decoder model
+    :param criterion: loss layer
+    :return: BLEU-4 score
+    """
+    decoder.eval()  # eval mode (no dropout or batchnorm)
+    if encoder is not None:
+        encoder.eval()
+
+    batch_time = AverageMeter()
+    losses = AverageMeter()
+    top5accs = AverageMeter()
+
+    start = time.time()
+
+    references = list()  # references (true captions) for calculating BLEU-4 score
+    hypotheses = list()  # hypotheses (predictions)
+
+    # explicitly disable gradient calculation to avoid CUDA memory error
+    # solves the issue #57
+    with torch.no_grad():
+        # Batches
+        for i, (imgs, caps, caplens, allcaps) in enumerate(val_loader):
+
+            # Move to device, if available
+            imgs = imgs.to(device)
+            caps = caps.to(device)
+            caplens = caplens.to(device)
+
+            encoder_out = encoder(imgs)
+        
+        	(hypotheses, sum_top_scores) = get_hypothesis_greedy(encoder_out, sample=True)
+
+       		# Calculate loss
+       		loss = criterion(imgs, hypotheses, sum_top_scores)
+
+            # Keep track of metrics
+            losses.update(loss.item(), sum(decode_lengths))
+            top5 = accuracy(scores, targets, 5)
+            top5accs.update(top5, sum(decode_lengths))
+            batch_time.update(time.time() - start)
+
+            start = time.time()
+
+            if i % print_freq == 0:
+                print('Validation: [{0}/{1}]\t'
+                      'Batch Time {batch_time.val:.3f} ({batch_time.avg:.3f})\t'
+                      'Loss {loss.val:.4f} ({loss.avg:.4f})\t'
+                      'Top-5 Accuracy {top5.val:.3f} ({top5.avg:.3f})\t'.format(i, len(val_loader), batch_time=batch_time,
+                                                                                loss=losses, top5=top5accs))
+
+           
+
+        print(
+            '\n * LOSS - {loss.avg:.3f}, TOP-5 ACCURACY - {top5.avg:.3f}, Average Reward- {bleu}\n'.format(
+                loss=losses,
+                top5=top5accs,
+                bleu=bleu4))
+
+    return bleu4
+
 
 if __name__ == '__main__':
     main()
