@@ -121,6 +121,12 @@ def training_epochs(encoder, decoder, encoder_optimizer, decoder_optimizer, trai
 
 	global best_bleu4, best_reward, epochs_since_improvement, checkpoint, start_epoch, fine_tune_encoder, data_name, word_map, epochs_XE, epochs_RL
 
+
+	# BEGIN XE Training --------------------------------------------
+	training_type = 'XE'
+
+
+
  	for epoch in range(start_epoch, epochs_XE):
 
     	# Decay learning rate if there is no improvement for 8 consecutive epochs, and terminate training after 20
@@ -161,7 +167,11 @@ def training_epochs(encoder, decoder, encoder_optimizer, decoder_optimizer, trai
 
         # Save checkpoint
         save_checkpoint(data_name, epoch, epochs_since_improvement, encoder, decoder, encoder_optimizer,
-                        decoder_optimizer, recent_bleu4, is_best)    
+                        decoder_optimizer, is_best, training_type, bleu4=recent_bleu4)    
+
+
+    # BEGIN RL TRAINING -------------------------------
+    training_type = 'RL'
 
     for epoch in range(start_epoch, epochs_RL):
 
@@ -203,7 +213,7 @@ def training_epochs(encoder, decoder, encoder_optimizer, decoder_optimizer, trai
 
         # Save checkpoint
         save_checkpoint(data_name, epoch, epochs_since_improvement, encoder, decoder, encoder_optimizer,
-                        decoder_optimizer, recent_bleu4, is_best)  
+                        decoder_optimizer, is_best, training_type, reward=recent_reward)  
 
 
 			
@@ -495,9 +505,7 @@ def validate_RL(val_loader, encoder, decoder, criterion):
         encoder.eval()
 
     batch_time = AverageMeter()
-    losses = AverageMeter()
-    top5accs = AverageMeter()
-
+    
     start = time.time()
 
     references = list()  # references (true captions) for calculating BLEU-4 score
@@ -516,35 +524,28 @@ def validate_RL(val_loader, encoder, decoder, criterion):
 
             encoder_out = encoder(imgs)
         
-        	(hypotheses, sum_top_scores) = get_hypothesis_greedy(encoder_out, sample=True)
-
-       		# Calculate loss
-       		loss = criterion(imgs, hypotheses, sum_top_scores)
-
-            # Keep track of metrics
-            losses.update(loss.item(), sum(decode_lengths))
-            top5 = accuracy(scores, targets, 5)
-            top5accs.update(top5, sum(decode_lengths))
+        	# Notice, we are not sampling here! We are using greedy decoding.
+        	(hypotheses, sum_top_scores) = get_hypothesis_greedy(encoder_out, sample=False)
+     		
             batch_time.update(time.time() - start)
 
+            avg_reward = image_comparison_reward(imgs, hypotheses).mean()
             start = time.time()
 
             if i % print_freq == 0:
                 print('Validation: [{0}/{1}]\t'
                       'Batch Time {batch_time.val:.3f} ({batch_time.avg:.3f})\t'
-                      'Loss {loss.val:.4f} ({loss.avg:.4f})\t'
-                      'Top-5 Accuracy {top5.val:.3f} ({top5.avg:.3f})\t'.format(i, len(val_loader), batch_time=batch_time,
-                                                                                loss=losses, top5=top5accs))
+                      'Average Reward:{avg_reward:.3f}')
 
            
 
         print(
-            '\n * LOSS - {loss.avg:.3f}, TOP-5 ACCURACY - {top5.avg:.3f}, Average Reward- {bleu}\n'.format(
+            '\n * LOSS - {loss.avg:.3f}, TOP-5 ACCURACY - {top5.avg:.3f}, Average Reward- {avg_reward:.3f}\n'.format(
                 loss=losses,
                 top5=top5accs,
-                bleu=bleu4))
+                avg_reward=avg_reward))
 
-    return bleu4
+    return avg_reward
 
 
 if __name__ == '__main__':

@@ -3,11 +3,15 @@ import numpy as np
 import h5py
 import json
 import torch
+import pickle
 from torch.nn.modules.loss import _Loss
 from scipy.misc import imread, imresize
 from tqdm import tqdm
 from collections import Counter
 from random import seed, choice, sample
+
+trends_XE = []
+trends_RL = []
 
 
 def create_input_files(dataset, karpathy_json_path, image_folder, captions_per_image, min_word_freq, output_folder,
@@ -207,7 +211,7 @@ def clip_gradient(optimizer, grad_clip):
 
 
 def save_checkpoint(data_name, epoch, epochs_since_improvement, encoder, decoder, encoder_optimizer, decoder_optimizer,
-                    bleu4, is_best):
+                    is_best, training_type, reward=None, bleu4=None):
     """
     Saves model checkpoint.
 
@@ -221,18 +225,29 @@ def save_checkpoint(data_name, epoch, epochs_since_improvement, encoder, decoder
     :param bleu4: validation BLEU-4 score for this epoch
     :param is_best: is this checkpoint the best so far?
     """
-    state = {'epoch': epoch,
+    state = {'training_type': training_type,
+    		 'epoch': epoch,
              'epochs_since_improvement': epochs_since_improvement,
              'bleu-4': bleu4,
+             'reward': reward,
              'encoder': encoder,
              'decoder': decoder,
              'encoder_optimizer': encoder_optimizer,
              'decoder_optimizer': decoder_optimizer}
-    filename = 'checkpoint_' + data_name + '.pth.tar'
+    filename = training_type + '_checkpoint_' + data_name + '.pth.tar'
     torch.save(state, filename)
     # If this checkpoint is the best so far, store a copy so it doesn't get overwritten by a worse checkpoint
     if is_best:
         torch.save(state, 'BEST_' + filename)
+
+    # Save trends in XE and RL training.
+    if training_type=='XE':
+    	trends_XE.append(bleu4)
+    else:
+    	trends_RL.append(reward)
+
+    with open('trends.pkl','wb') as f:
+    	pickle.dump((trends_XE, trends_RL), f)
 
 
 class AverageMeter(object):
@@ -303,10 +318,17 @@ def scst_baseline(imgs):
 	"""
 	<stub>: Compute SCST baseline for given images.
 	"""
-	return torch.zeros(imgs.size(0))
+	# Important! Do not sample here, use the test-time greedy decoding algorithm.
+	(hypotheses, sum_top_scores) = get_hypothesis_greedy(encoder_out, sample=False)
+
+	return image_comparison_reward(imgs, hypothesis)
 
 def image_comparison_reward(imgs, hypothesis):
 	"""
 	<stub>: Generate images from hypothesis and compare original and recreation.
+	
+	<Get text embeddings for minibatch>
+	<>
 	"""
+
 	return torch.ones(hypothesis.size(0))
