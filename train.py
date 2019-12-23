@@ -32,17 +32,20 @@ encoder_lr = 1e-4  # learning rate for encoder if fine-tuning
 decoder_lr = 4e-4  # learning rate for decoder
 grad_clip = 5.  # clip gradients at an absolute value of
 alpha_c = 1.  # regularization parameter for 'doubly stochastic attention', as in the paper
+
+training_type = 'XE' # Always start with XE training, can be skipped if you load an RL checkpoint.
 best_bleu4 = 0.  # BLEU-4 score right now
 best_reward = 0. # Avg Reward right now
+
 print_freq = 100  # print training/validation stats every __ batches
 fine_tune_encoder = False  # fine-tune encoder?
 checkpoint = None  # path to checkpoint, None if none
 
 # Training parameters (Cross Entropy Maximization)
-epochs_XE = 120  # number of epochs to train for (if early stopping is not triggered)
+epochs_XE = 1#120  # number of epochs to train for (if early stopping is not triggered)
 
 # Training parameters (Expected Reward Maximization)
-epochs_RL = 120  # number of epochs to train for (if early stopping is not triggered)
+epochs_RL = 1#120  # number of epochs to train for (if early stopping is not triggered)
 
 
 def main():
@@ -50,7 +53,7 @@ def main():
     Training and validation.
     """
 
-    global best_bleu4, epochs_since_improvement, checkpoint, start_epoch, fine_tune_encoder, data_name, word_map, epochs
+    global training_type, best_bleu4, best_reward, epochs_since_improvement, checkpoint, start_epoch, fine_tune_encoder, data_name, word_map, epochs
 
     # Read word map
     word_map_file = os.path.join(data_folder, 'WORDMAP_' + data_name + '.json')
@@ -74,8 +77,10 @@ def main():
     else:
         checkpoint = torch.load(checkpoint)
         start_epoch = checkpoint['epoch'] + 1
+        training_type = checkpoint['training_type']
         epochs_since_improvement = checkpoint['epochs_since_improvement']
         best_bleu4 = checkpoint['bleu-4']
+        best_reward = checkpoint['best_reward']
         decoder = checkpoint['decoder']
         decoder_optimizer = checkpoint['decoder_optimizer']
         encoder = checkpoint['encoder']
@@ -99,19 +104,18 @@ def main():
         CaptionDataset(data_folder, data_name, 'VAL', transform=transforms.Compose([normalize])),
         batch_size=batch_size, shuffle=True, num_workers=workers, pin_memory=True)
 
-    # Training to maximize cross entropy.
+    # Training to maximize cross entropy and maximize sum of expected rewards.
     training_epochs(encoder, 
     				decoder,
     				encoder_optimizer,
                     decoder_optimizer,
                     train_loader,
                     val_loader,
-                    device,
-                    train_type='XE')
+                    device)
 
 
 
-def training_epochs(encoder, decoder, encoder_optimizer, decoder_optimizer, train_loader, val_loader, device, train_type='XE'):
+def training_epochs(encoder, decoder, encoder_optimizer, decoder_optimizer, train_loader, val_loader, device):
 	"""
 	Runs training epochs with checkpointing.
 	 :param train_type: Objective of:
@@ -119,59 +123,58 @@ def training_epochs(encoder, decoder, encoder_optimizer, decoder_optimizer, trai
 	 				         (2)Maximizing Expected Reward using the SCST algorithm.
 	"""
 
-	global best_bleu4, best_reward, epochs_since_improvement, checkpoint, start_epoch, fine_tune_encoder, data_name, word_map, epochs_XE, epochs_RL
+	global training_type, best_bleu4, best_reward, epochs_since_improvement, checkpoint, start_epoch, fine_tune_encoder, data_name, word_map, epochs_XE, epochs_RL
 
 
 	# BEGIN XE Training --------------------------------------------
-	training_type = 'XE'
+	if training_type == 'XE':
+        for epoch in range(start_epoch, epochs_XE):
 
+    	   # Decay learning rate if there is no improvement for 8 consecutive epochs, and terminate training after 20
+            if epochs_since_improvement == 20:
+                break
+            if epochs_since_improvement > 0 and epochs_since_improvement % 8 == 0:
+                adjust_learning_rate(decoder_optimizer, 0.8)
+                if fine_tune_encoder:
+                    adjust_learning_rate(encoder_optimizer, 0.8)
 
-
- 	for epoch in range(start_epoch, epochs_XE):
-
-    	# Decay learning rate if there is no improvement for 8 consecutive epochs, and terminate training after 20
-        if epochs_since_improvement == 20:
-            break
-        if epochs_since_improvement > 0 and epochs_since_improvement % 8 == 0:
-            adjust_learning_rate(decoder_optimizer, 0.8)
-            if fine_tune_encoder:
-                adjust_learning_rate(encoder_optimizer, 0.8)
-
-        # One epoch's training using the Cross Entropy Loss function ------------------------------------
-        criterion_XE = nn.CrossEntropyLoss().to(device)
+            # One epoch's training using the Cross Entropy Loss function ------------------------------------
+            criterion_XE = nn.CrossEntropyLoss().to(device)
             
-        train_XE(train_loader=train_loader,
-                 encoder=encoder,
-                 decoder=decoder,
-                 criterion=criterion_XE,
-                 encoder_optimizer=encoder_optimizer,
-                 decoder_optimizer=decoder_optimizer,
-                 epoch=epoch)
+            train_XE(train_loader=train_loader,
+                     encoder=encoder,
+                     decoder=decoder,
+                     criterion=criterion_XE,
+                     encoder_optimizer=encoder_optimizer,
+                     decoder_optimizer=decoder_optimizer,
+                     epoch=epoch)
 
         #-------------------------------------------------------------------------------------------------
 
-        # One epoch's validation
-        recent_bleu4 = validate_XE(val_loader=val_loader,
-                                encoder=encoder,
-                                decoder=decoder,
-                                criterion=criterion)
+            # One epoch's validation
+            recent_bleu4 = validate_XE(val_loader=val_loader,
+                                       encoder=encoder,
+                                       decoder=decoder,
+                                       criterion=criterion)
 
-        # Check if there was an improvement
-        is_best = recent_bleu4 > best_bleu4
-        best_bleu4 = max(recent_bleu4, best_bleu4)
-        if not is_best:
-            epochs_since_improvement += 1
-            print("\nEpochs since last improvement: %d\n" % (epochs_since_improvement,))
-        else:
-            epochs_since_improvement = 0
+            # Check if there was an improvement
+            is_best = recent_bleu4 > best_bleu4
+            best_bleu4 = max(recent_bleu4, best_bleu4)
+            if not is_best:
+                epochs_since_improvement += 1
+                print("\nEpochs since last improvement: %d\n" % (epochs_since_improvement,))
+            else:
+                epochs_since_improvement = 0
 
-        # Save checkpoint
-        save_checkpoint(data_name, epoch, epochs_since_improvement, encoder, decoder, encoder_optimizer,
+            # Save checkpoint
+            save_checkpoint(data_name, epoch, epochs_since_improvement, encoder, decoder, encoder_optimizer,
                         decoder_optimizer, is_best, training_type, bleu4=recent_bleu4)    
 
 
     # BEGIN RL TRAINING -------------------------------
     training_type = 'RL'
+
+    epochs_since_improvement=0 # Reset epochs since improvement.
 
     for epoch in range(start_epoch, epochs_RL):
 
@@ -184,7 +187,7 @@ def training_epochs(encoder, decoder, encoder_optimizer, decoder_optimizer, trai
                 adjust_learning_rate(encoder_optimizer, 0.8)
 
         # One epoch's training maximizing the sum of expected rewards loss function
-		criterion_SCST = RL_loss(image_comparison_reward, scst_baseline).to(device)
+		criterion_SCST = RL_loss(image_comparison_reward).to(device)
 
         train_RL(train_loader=train_loader,
                  encoder=encoder,
@@ -343,9 +346,9 @@ def train_RL(train_loader, encoder, decoder, criterion, encoder_optimizer, decod
         encoder_out = encoder(imgs)
         
         (hypotheses, sum_top_scores) = get_hypothesis_greedy(encoder_out, sample=True)
-
+        (hyp_max, _) = get_hypothesis_greedy(encoder_out, sample=False)
         # Calculate loss
-        loss = criterion(imgs, hypotheses, sum_top_scores)
+        loss = criterion(imgs, hypotheses, hyp_max, sum_top_scores)
 
         # Back prop.
         decoder_optimizer.zero_grad()
@@ -511,6 +514,9 @@ def validate_RL(val_loader, encoder, decoder, criterion):
     references = list()  # references (true captions) for calculating BLEU-4 score
     hypotheses = list()  # hypotheses (predictions)
 
+    counter = 0
+    sum_avg_rewards = 0
+
     # explicitly disable gradient calculation to avoid CUDA memory error
     # solves the issue #57
     with torch.no_grad():
@@ -529,20 +535,22 @@ def validate_RL(val_loader, encoder, decoder, criterion):
      		
             batch_time.update(time.time() - start)
 
-            avg_reward = image_comparison_reward(imgs, hypotheses).mean()
+            batch_avg_reward = image_comparison_reward(imgs, hypotheses).mean()
+            sum_avg_rewards += batch_avg_reward
+            counter +=1
+
             start = time.time()
 
             if i % print_freq == 0:
                 print('Validation: [{0}/{1}]\t'
                       'Batch Time {batch_time.val:.3f} ({batch_time.avg:.3f})\t'
-                      'Average Reward:{avg_reward:.3f}')
+                      'Minibatch Average Reward:{batch_avg_reward:.3f}')
 
            
+        avg_reward = sum_avg_rewards/counter
 
         print(
-            '\n * LOSS - {loss.avg:.3f}, TOP-5 ACCURACY - {top5.avg:.3f}, Average Reward- {avg_reward:.3f}\n'.format(
-                loss=losses,
-                top5=top5accs,
+            '\n * Epoch Average Reward- {avg_reward:.3f}\n'.format(
                 avg_reward=avg_reward))
 
     return avg_reward

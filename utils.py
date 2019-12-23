@@ -1,4 +1,5 @@
 import os
+import subprocess
 import numpy as np
 import h5py
 import json
@@ -13,6 +14,7 @@ from random import seed, choice, sample
 trends_XE = []
 trends_RL = []
 
+word_map_path=''
 
 def create_input_files(dataset, karpathy_json_path, image_folder, captions_per_image, min_word_freq, output_folder,
                        max_len=100):
@@ -242,9 +244,9 @@ def save_checkpoint(data_name, epoch, epochs_since_improvement, encoder, decoder
 
     # Save trends in XE and RL training.
     if training_type=='XE':
-    	trends_XE.append(bleu4)
+    	trends_XE.append((epoch, bleu4))
     else:
-    	trends_RL.append(reward)
+    	trends_RL.append((epoch, reward))
 
     with open('trends.pkl','wb') as f:
     	pickle.dump((trends_XE, trends_RL), f)
@@ -302,33 +304,32 @@ def accuracy(scores, targets, k):
     return correct_total.item() * (100.0 / batch_size)
 
 class RL_loss(_Loss):
-	def __init__(self, reward_function, baseline):
+	def __init__(self, reward_function):
 		
 		super(RL_SCST_loss, self).__init__(size_average=None, reduce=None, reduction='mean')
 		self. reward_function = reward_function
-		self.baseline = baseline
 
-	def forward(self, imgs, hypothesis, sum_top_scores):
+	def forward(self, imgs, hypothesis, hyp_max, sum_top_scores):
 
-		advantage = self.reward_function(imgs, hypothesis) - self.baseline(imgs)
+		advantage = self.reward_function(imgs, hypothesis) - self.reward_function(imgs, hyp_max)
 		weighted_sum_top_scores = advantage * sum_top_scores
 		return ((-1) * weighted_sum_top_scores.mean()) # Important!!! use negative sum of expected rewards to treat as minimization problem. 
 
-def scst_baseline(imgs):
-	"""
-	<stub>: Compute SCST baseline for given images.
-	"""
-	# Important! Do not sample here, use the test-time greedy decoding algorithm.
-	(hypotheses, sum_top_scores) = get_hypothesis_greedy(encoder_out, sample=False)
-
-	return image_comparison_reward(imgs, hypothesis)
-
 def image_comparison_reward(imgs, hypothesis):
 	"""
-	<stub>: Generate images from hypothesis and compare original and recreation.
-	
-	<Get text embeddings for minibatch>
-	<>
 	"""
+	# Translate and save the hypothesis as plain text.
+	with open(word_map_path, 'r') as j:
+        word_map = json.load(j)
+    rev_word_map = {v: k for k, v in word_map.items()}  # ix2word
+
+    words = [rev_word_map[ind] for ind in hypothesis]
+
+    with open('mini_batch_captions.txt','w') as f:
+    	for wo in words:
+    		f.write(' '.join(' ') + '\n')
+
+    # Get encoding (saved as torchfile)
+    subprocess.call('bash ./encode_text.sh')
 
 	return torch.ones(hypothesis.size(0))
