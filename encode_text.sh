@@ -4,7 +4,7 @@
 # Extract text embeddings from the encoder
 #
 
-CUB_ENCODER=coco_gru18_bs64_cls0.5_ngf128_ndf128_a10_c512_80_net_T.t7 \
+CUB_ENCODER=/media/ssd/caption_data/coco_gru18_bs64_cls0.5_ngf128_ndf128_a10_c512_80_net_T.t7 \
 CAPTION_PATH=/media/ssd/caption_data/mini_batch_captions \
 GPU=0 \
 
