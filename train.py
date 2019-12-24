@@ -26,7 +26,7 @@ cudnn.benchmark = True  # set to true only if inputs to model are fixed size; ot
 # Training parameters (General)
 start_epoch = 0
 epochs_since_improvement = 0  # keeps track of number of epochs since there's been an improvement in validation BLEU
-batch_size = 32
+batch_size = 64
 workers = 1  # for data-loading; right now, only 1 works with h5py
 encoder_lr = 1e-4  # learning rate for encoder if fine-tuning
 decoder_lr = 4e-4  # learning rate for decoder
@@ -199,11 +199,10 @@ def training_epochs(encoder, decoder, encoder_optimizer, decoder_optimizer, trai
 
         #-------------------------------------------------------------------------------------------------
 
-        # One epoch's validation
+        # One epoch's validation (Computes average reward for the epoch)
         recent_reward = validate_RL(val_loader=val_loader,
                                 	encoder=encoder,
-                                	decoder=decoder,
-                                	criterion=criterion)
+                                	decoder=decoder)
 
         # Check if there was an improvement 
         is_best = recent_reward > best_reward
@@ -493,7 +492,7 @@ def validate_XE(val_loader, encoder, decoder, criterion):
 
     return bleu4
 
-def validate_RL(val_loader, encoder, decoder, criterion):
+def validate_RL(val_loader, encoder, decoder):
     """
     Performs one epoch's validation.
 
