@@ -27,7 +27,7 @@ rm -rf *.zip
 
 cd $working_dir/a-PyTorch-Tutorial-to-Image-Captioning
 
-## Manually download from: https://drive.google.com/file/d/0B0ywwgffWnLLeVNmVVV6OHBDUFE/view to: /media/ssd/caption_data/
+## Manually download from: https://drive.google.com/file/d/0B0ywwgffWnLLeVNmVVV6OHBDUFE/view to: /media/ssd/caption_data/text_encoder/
 # Run:  python create_input_files.py (submit job)
 # Run:  python train.py (submit job)
 
