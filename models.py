@@ -10,20 +10,26 @@ class Encoder(nn.Module):
     Encoder.
     """
 
-    def __init__(self, encoded_image_size=14):
+    def __init__(self, encoded_image_size=14, fully_connected=False):
         super(Encoder, self).__init__()
         self.enc_image_size = encoded_image_size
 
         resnet = torchvision.models.resnet101(pretrained=True)  # pretrained ImageNet ResNet-101
 
         # Remove linear and pool layers (since we're not doing classification)
-        modules = list(resnet.children())[:-2]
-        self.resnet = nn.Sequential(*modules)
+        if fully_connected:
+        	modules = list(resnet.children())
+        	self.resnet = nn.Sequential(*modules)
+        	self.fine_tune(fine_tune=False)
+        else:
+        	modules = list(resnet.children())[:-2]
+        
+        	self.resnet = nn.Sequential(*modules)
 
-        # Resize image to fixed size to allow input images of variable size
-        self.adaptive_pool = nn.AdaptiveAvgPool2d((encoded_image_size, encoded_image_size))
+        	# Resize image to fixed size to allow input images of variable size
+        	self.adaptive_pool = nn.AdaptiveAvgPool2d((encoded_image_size, encoded_image_size))
 
-        self.fine_tune()
+        	self.fine_tune()
 
     def forward(self, images):
         """

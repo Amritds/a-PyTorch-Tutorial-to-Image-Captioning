@@ -6,15 +6,22 @@ import json
 import torch
 import pickle
 from torch.nn.modules.loss import _Loss
+from torch.nn import CosineSimilarity
 from scipy.misc import imread, imresize
 from tqdm import tqdm
 from collections import Counter
 from random import seed, choice, sample
+from models import Encoder
+
 
 trends_XE = []
 trends_RL = []
 
 word_map_path=''
+
+# Use to compute cosine similarity between resnet encodings.
+comparision_encoder = Encoder(fully_connected=True)
+cos = CosineSimilarity(dim=1, eps=1e-6)
 
 def create_input_files(dataset, karpathy_json_path, image_folder, captions_per_image, min_word_freq, output_folder,
                        max_len=100):
@@ -316,8 +323,7 @@ class RL_loss(_Loss):
 		return ((-1) * weighted_sum_top_scores.mean()) # Important!!! use negative sum of expected rewards to treat as minimization problem. 
 
 def image_comparison_reward(imgs, hypothesis):
-	"""
-	"""
+	
 	# Translate and save the hypothesis as plain text.
 	with open(word_map_path, 'r') as j:
         word_map = json.load(j)
@@ -332,4 +338,16 @@ def image_comparison_reward(imgs, hypothesis):
     # Get encoding (saved as torchfile)
     subprocess.call('bash ./encode_text.sh')
 
-	return torch.ones(hypothesis.size(0))
+    # Generate images
+    subprocess.call('python ./StackGAN-Pytorch/code/main.py --cfg ./StackGAN-Pytorch /code/cfg/coco_eval.yml --gpu 2')
+
+    # load the minibatch of recreated images
+
+    # compute the encoding for recreated and original images
+    encoded_original = comparision_encoder(imgs)
+    encoded_recreation = comparision_encoder(recreated_imgs)
+
+    # compute similarity
+    similarity = cos(encoded_original, encoded_recreation)
+
+	return similarity
