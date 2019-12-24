@@ -17,7 +17,18 @@ from models import Encoder
 trends_XE = []
 trends_RL = []
 
-word_map_path=''
+# Data parameters
+data_folder = '/media/ssd/caption_data'  # folder with data files saved by create_input_files.py
+data_name = 'coco_5_cap_per_img_5_min_word_freq'  # base name shared by data files
+
+# Read word map and create reverse wordmap.
+
+word_map_file = os.path.join(data_folder, 'WORDMAP_' + data_name + '.json')
+with open(word_map_file, 'r') as j:
+	word_map = json.load(j)
+
+rev_word_map = {v: k for k, v in word_map.items()}  # ix2word
+
 
 # Use to compute cosine similarity between resnet encodings.
 comparision_encoder = Encoder(fully_connected=True)
@@ -325,13 +336,10 @@ class RL_loss(_Loss):
 def image_comparison_reward(imgs, hypothesis):
 	
 	# Translate and save the hypothesis as plain text.
-	with open(word_map_path, 'r') as j:
-        word_map = json.load(j)
-    rev_word_map = {v: k for k, v in word_map.items()}  # ix2word
+	words = [rev_word_map[ind] for ind in hypothesis]
 
-    words = [rev_word_map[ind] for ind in hypothesis]
-
-    with open('mini_batch_captions.txt','w') as f:
+	minibatch_words_path = os.path.join(data_folder, 'mini_batch_captions.txt')
+    with open(minibatch_words_path,'w') as f:
     	for wo in words:
     		f.write(' '.join(' ') + '\n')
 
