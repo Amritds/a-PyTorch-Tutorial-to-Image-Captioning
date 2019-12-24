@@ -339,6 +339,7 @@ def image_comparison_reward(imgs, hypothesis):
 	words = [rev_word_map[ind] for ind in hypothesis]
 
 	minibatch_words_path = os.path.join(data_folder, 'mini_batch_captions.txt')
+
     with open(minibatch_words_path,'w') as f:
     	for wo in words:
     		f.write(' '.join(' ') + '\n')
