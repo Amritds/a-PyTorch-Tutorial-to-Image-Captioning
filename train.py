@@ -33,7 +33,12 @@ decoder_lr = 4e-4  # learning rate for decoder
 grad_clip = 5.  # clip gradients at an absolute value of
 alpha_c = 1.  # regularization parameter for 'doubly stochastic attention', as in the paper
 
-training_type = 'XE' # Always start with XE training, can be skipped if you load an RL checkpoint.
+desired_training_type = 'XE'
+training_type = desired_training_type
+
+reward_map ={'RL_recreation' : image_comparison_reward,
+			 'RL_bleu' : BLEU_reward}
+
 best_bleu4 = 0.  # BLEU-4 score right now
 best_reward = 0. # Avg Reward right now
 
@@ -45,7 +50,7 @@ checkpoint = None  # path to checkpoint, None if none
 epochs_XE = 1#120  # number of epochs to train for (if early stopping is not triggered)
 
 # Training parameters (Expected Reward Maximization)
-epochs_RL = 1#120  # number of epochs to train for (if early stopping is not triggered)
+epochs_RL = 0#120  # number of epochs to train for (if early stopping is not triggered)
 
 
 def main():
@@ -90,6 +95,12 @@ def main():
             encoder_optimizer = torch.optim.Adam(params=filter(lambda p: p.requires_grad, encoder.parameters()),
                                                  lr=encoder_lr)
 
+        # Reset training parameters if desired training type and training type do not match.
+        if training_type != desired_training_type:
+        	training_type = desired_training_type
+        	epochs_since_improvement = 0
+        	start_epoch=0
+
     # Move to GPU, if available
     decoder = decoder.to(device)
     encoder = encoder.to(device)
@@ -125,19 +136,19 @@ def training_epochs(encoder, decoder, encoder_optimizer, decoder_optimizer, trai
 
 	global training_type, best_bleu4, best_reward, epochs_since_improvement, checkpoint, start_epoch, fine_tune_encoder, data_name, word_map, epochs_XE, epochs_RL
 
+	for epoch in range(start_epoch, epochs_XE):
+
+		# Decay learning rate if there is no improvement for 8 consecutive epochs, and terminate training after 20
+        if epochs_since_improvement == 20:
+        	break
+        if epochs_since_improvement > 0 and epochs_since_improvement % 8 == 0:
+        	adjust_learning_rate(decoder_optimizer, 0.8)
+            if fine_tune_encoder:
+            	adjust_learning_rate(encoder_optimizer, 0.8)
 
 	# BEGIN XE Training --------------------------------------------
 	if training_type == 'XE':
-        for epoch in range(start_epoch, epochs_XE):
-
-    	   # Decay learning rate if there is no improvement for 8 consecutive epochs, and terminate training after 20
-            if epochs_since_improvement == 20:
-                break
-            if epochs_since_improvement > 0 and epochs_since_improvement % 8 == 0:
-                adjust_learning_rate(decoder_optimizer, 0.8)
-                if fine_tune_encoder:
-                    adjust_learning_rate(encoder_optimizer, 0.8)
-
+        
             # One epoch's training using the Cross Entropy Loss function ------------------------------------
             criterion_XE = nn.CrossEntropyLoss().to(device)
             
@@ -172,54 +183,52 @@ def training_epochs(encoder, decoder, encoder_optimizer, decoder_optimizer, trai
 
 
     # BEGIN RL TRAINING -------------------------------
-    training_type = 'RL'
+    elif training_type[:2] == 'RL'
 
-    epochs_since_improvement=0 # Reset epochs since improvement.
+    	for epoch in range(start_epoch, epochs_RL):
 
-    for epoch in range(start_epoch, epochs_RL):
+    		# Decay learning rate if there is no improvement for 8 consecutive epochs, and terminate training after 20
+        	if epochs_since_improvement == 20:
+            	break
+        	if epochs_since_improvement > 0 and epochs_since_improvement % 8 == 0:
+            	adjust_learning_rate(decoder_optimizer, 0.8)
+            	if fine_tune_encoder:
+                	adjust_learning_rate(encoder_optimizer, 0.8)
 
-    	# Decay learning rate if there is no improvement for 8 consecutive epochs, and terminate training after 20
-        if epochs_since_improvement == 20:
-            break
-        if epochs_since_improvement > 0 and epochs_since_improvement % 8 == 0:
-            adjust_learning_rate(decoder_optimizer, 0.8)
-            if fine_tune_encoder:
-                adjust_learning_rate(encoder_optimizer, 0.8)
-
-        # One epoch's training maximizing the sum of expected rewards loss function
-		criterion_SCST = RL_loss(image_comparison_reward).to(device)
-
-        train_RL(train_loader=train_loader,
-                 encoder=encoder,
-                 decoder=decoder,
-                 criterion=criterion_SCST,
-                 encoder_optimizer=encoder_optimizer,
-                 decoder_optimizer=decoder_optimizer,
-                 epoch=epoch)
-
-        #-------------------------------------------------------------------------------------------------
-
-        # One epoch's validation (Computes average reward for the epoch)
-        recent_reward = validate_RL(val_loader=val_loader,
-                                	encoder=encoder,
-                                	decoder=decoder)
-
-        # Check if there was an improvement 
-        is_best = recent_reward > best_reward
-        best_reward = max(recent_reward, best_reward)
-        if not is_best:
-            epochs_since_improvement += 1
-            print("\nEpochs since last improvement: %d\n" % (epochs_since_improvement,))
-        else:
-            epochs_since_improvement = 0
-
-        # Save checkpoint
-        save_checkpoint(data_name, epoch, epochs_since_improvement, encoder, decoder, encoder_optimizer,
-                        decoder_optimizer, is_best, training_type, reward=recent_reward)  
-
-
+        	# One epoch's training maximizing the sum of expected rewards loss function
 			
+			reward_function = reward_map[training_type]				
 
+			criterion = RL_loss(reward_function).to(device)
+
+        	train_RL(train_loader=train_loader,
+            	     encoder=encoder,
+                	 decoder=decoder,
+                 	 criterion=criterion,
+                 	 encoder_optimizer=encoder_optimizer,
+                     decoder_optimizer=decoder_optimizer,
+                 	 epoch=epoch)
+
+        	#-------------------------------------------------------------------------------------------------
+
+        	# One epoch's validation (Computes average reward for the epoch)
+        	recent_reward = validate_RL(val_loader=val_loader,
+            	                    	encoder=encoder,
+                	                	decoder=decoder,
+                	                	reward_function=reward_function)
+
+        	# Check if there was an improvement 
+        	is_best = recent_reward > best_reward
+        	best_reward = max(recent_reward, best_reward)
+        	if not is_best:
+            	epochs_since_improvement += 1
+            	print("\nEpochs since last improvement: %d\n" % (epochs_since_improvement,))
+        	else:
+            	epochs_since_improvement = 0
+
+        	# Save checkpoint
+        	save_checkpoint(data_name, epoch, epochs_since_improvement, encoder, decoder, encoder_optimizer,
+            	            decoder_optimizer, is_best, training_type, reward=recent_reward)  
 
 
 def train_XE(train_loader, encoder, decoder, criterion, encoder_optimizer, decoder_optimizer, epoch):
@@ -228,7 +237,7 @@ def train_XE(train_loader, encoder, decoder, criterion, encoder_optimizer, decod
 
     :param train_loader: DataLoader for training data
     :param encoder: encoder model
-    :param decoder: decoder model
+    :param decoder: decoder modelfrom nltk.translate.bleu_score import corpus_bleu
     :param criterion: loss layer
     :param encoder_optimizer: optimizer to update encoder's weights (if fine-tuning)
     :param decoder_optimizer: optimizer to update decoder's weights
@@ -347,7 +356,7 @@ def train_RL(train_loader, encoder, decoder, criterion, encoder_optimizer, decod
         (hypotheses, sum_top_scores) = get_hypothesis_greedy(encoder_out, sample=True)
         (hyp_max, _) = get_hypothesis_greedy(encoder_out, sample=False)
         # Calculate loss
-        loss = criterion(imgs, hypotheses, hyp_max, sum_top_scores)
+        loss = criterion(imgs, caps, hypotheses, hyp_max, sum_top_scores)
 
         # Back prop.
         decoder_optimizer.zero_grad()
@@ -492,7 +501,7 @@ def validate_XE(val_loader, encoder, decoder, criterion):
 
     return bleu4
 
-def validate_RL(val_loader, encoder, decoder):
+def validate_RL(val_loader, encoder, decoder, reward_function):
     """
     Performs one epoch's validation.
 
@@ -534,7 +543,7 @@ def validate_RL(val_loader, encoder, decoder):
      		
             batch_time.update(time.time() - start)
 
-            batch_avg_reward = image_comparison_reward(imgs, hypotheses).mean()
+            batch_avg_reward = reward_function(imgs, hypotheses, caps).mean()
             sum_avg_rewards += batch_avg_reward
             counter +=1
 

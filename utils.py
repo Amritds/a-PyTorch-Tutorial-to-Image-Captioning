@@ -13,9 +13,7 @@ from collections import Counter
 from random import seed, choice, sample
 from models import Encoder
 
-
-trends_XE = []
-trends_RL = []
+from nltk.translate.bleu_score import corpus_bleu
 
 # Data parameters
 data_folder = '/media/ssd/caption_data'  # folder with data files saved by create_input_files.py
@@ -260,15 +258,6 @@ def save_checkpoint(data_name, epoch, epochs_since_improvement, encoder, decoder
     if is_best:
         torch.save(state, 'BEST_' + filename)
 
-    # Save trends in XE and RL training.
-    if training_type=='XE':
-    	trends_XE.append((epoch, bleu4))
-    else:
-    	trends_RL.append((epoch, reward))
-
-    with open('trends.pkl','wb') as f:
-    	pickle.dump((trends_XE, trends_RL), f)
-
 
 class AverageMeter(object):
     """
@@ -327,14 +316,14 @@ class RL_loss(_Loss):
 		super(RL_SCST_loss, self).__init__(size_average=None, reduce=None, reduction='mean')
 		self. reward_function = reward_function
 
-	def forward(self, imgs, hypothesis, hyp_max, sum_top_scores):
+	def forward(self, imgs, ground_truth, hypothesis, hyp_max, sum_top_scores):
 
-		advantage = self.reward_function(imgs, hypothesis) - self.reward_function(imgs, hyp_max)
+		advantage = self.reward_function(imgs, hypothesis, ground_truth) - self.reward_function(imgs, hyp_max, ground_truth)
 		weighted_sum_top_scores = advantage * sum_top_scores
 		return ((-1) * weighted_sum_top_scores.mean()) # Important!!! use negative sum of expected rewards to treat as minimization problem. 
 
-def image_comparison_reward(imgs, hypothesis):
-	
+def image_comparison_reward(imgs, hypothesis, ground_truth=None):
+	# Note: Ground truth captions not required.
 	# Translate and save the hypothesis as plain text.
 	words = [rev_word_map[ind] for ind in hypothesis]
 
@@ -360,3 +349,13 @@ def image_comparison_reward(imgs, hypothesis):
     similarity = cos(encoded_original, encoded_recreation)
 
 	return similarity
+
+def BLEU_reward(imgs, hypothesis, ground_truth):
+	# Note: images not used.
+
+	img_caps = ground_truth.tolist()
+    img_captions = list(
+        map(lambda c: [w for w in c if w not in {word_map['<start>'], word_map['<end>'], word_map['<pad>']}],
+            img_caps))  # remove <start> and pads
+
+	return corpus_bleu(img_captions, hypothesis)
