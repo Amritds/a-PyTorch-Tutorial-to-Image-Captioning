@@ -15,6 +15,8 @@ from models import Encoder
 
 from nltk.translate.bleu_score import corpus_bleu
 
+from StackGAN import main_sampler as image_generator
+
 # Data parameters
 data_folder = '/media/ssd/caption_data'  # folder with data files saved by create_input_files.py
 data_name = 'coco_5_cap_per_img_5_min_word_freq'  # base name shared by data files
@@ -337,7 +339,7 @@ def image_comparison_reward(imgs, hypothesis, ground_truth=None):
     subprocess.call('bash ./encode_text.sh')
 
     # Generate images
-    subprocess.call('python ./StackGAN-Pytorch/code/main.py --cfg ./StackGAN-Pytorch /code/cfg/coco_eval.yml --gpu 2')
+    image_generator.sample()
 
     # load the minibatch of recreated images
 
