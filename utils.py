@@ -34,6 +34,19 @@ rev_word_map = {v: k for k, v in word_map.items()}  # ix2word
 comparison_encoder = Encoder(fully_connected=True)
 cos = CosineSimilarity(dim=1, eps=1e-6)
 
+
+def read_img(path):
+	img = imread(path)
+    if len(img.shape) == 2:
+    	img = img[:, :, np.newaxis]
+        img = np.concatenate([img, img, img], axis=2)
+    img = imresize(img, (256, 256))
+    img = img.transpose(2, 0, 1)
+    assert img.shape == (3, 256, 256)
+    assert np.max(img) <= 255
+
+    return img
+
 def create_input_files(dataset, karpathy_json_path, image_folder, captions_per_image, min_word_freq, output_folder,
                        max_len=100):
     """
@@ -137,14 +150,7 @@ def create_input_files(dataset, karpathy_json_path, image_folder, captions_per_i
                 assert len(captions) == captions_per_image
 
                 # Read images
-                img = imread(impaths[i])
-                if len(img.shape) == 2:
-                    img = img[:, :, np.newaxis]
-                    img = np.concatenate([img, img, img], axis=2)
-                img = imresize(img, (256, 256))
-                img = img.transpose(2, 0, 1)
-                assert img.shape == (3, 256, 256)
-                assert np.max(img) <= 255
+                img = read_img(impaths[i])
 
                 # Save image to HDF5 file
                 images[i] = img
@@ -335,11 +341,11 @@ def image_comparison_reward(imgs, hypothesis, ground_truth=None):
     	for wo in words:
     		f.write(' '.join(' ') + '\n')
 
-    # Get encoding (saved as torchfile)
+    # Get encoding (saved as a torchfile)
     subprocess.call('bash ./encode_text.sh')
 
-    # Generate images (saved to file)
-    image_generator()
+    # Generate images from encoded minbatch (saved to file)
+    recreated_imgs = image_generator()
 
     # compute the encoding for recreated and original images
     encoded_original = comparison_encoder(imgs)
