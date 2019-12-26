@@ -31,7 +31,7 @@ rev_word_map = {v: k for k, v in word_map.items()}  # ix2word
 
 
 # Use to compute cosine similarity between resnet encodings.
-comparision_encoder = Encoder(fully_connected=True)
+comparison_encoder = Encoder(fully_connected=True)
 cos = CosineSimilarity(dim=1, eps=1e-6)
 
 def create_input_files(dataset, karpathy_json_path, image_folder, captions_per_image, min_word_freq, output_folder,
@@ -342,8 +342,8 @@ def image_comparison_reward(imgs, hypothesis, ground_truth=None):
     image_generator()
 
     # compute the encoding for recreated and original images
-    encoded_original = comparision_encoder(imgs)
-    encoded_recreation = comparision_encoder(recreated_imgs)
+    encoded_original = comparison_encoder(imgs)
+    encoded_recreation = comparison_encoder(recreated_imgs)
 
     # compute similarity
     similarity = cos(encoded_original, encoded_recreation)
