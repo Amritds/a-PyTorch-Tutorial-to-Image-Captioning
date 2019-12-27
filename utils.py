@@ -18,7 +18,7 @@ from nltk.translate.bleu_score import corpus_bleu
 from StackGAN.main_sampler import sample as image_generator
 
 # Data parameters
-data_folder = '/media/ssd/caption_data'  # folder with data files saved by create_input_files.py
+data_folder = '/scratch/scratch5/adsue/caption_data'  # folder with data files saved by create_input_files.py
 data_name = 'coco_5_cap_per_img_5_min_word_freq'  # base name shared by data files
 
 # Read word map and create reverse wordmap.
