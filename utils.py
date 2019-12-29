@@ -36,7 +36,7 @@ cos = CosineSimilarity(dim=1, eps=1e-6)
 
 
 def read_img(path):
-	img = imread(path)
+    img = imread(path)
     if len(img.shape) == 2:
     	img = img[:, :, np.newaxis]
         img = np.concatenate([img, img, img], axis=2)
