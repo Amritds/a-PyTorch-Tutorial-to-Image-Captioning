@@ -103,10 +103,7 @@ def main():
             epochs_since_improvement = 0
             start_epoch=0
 
-    # Parallelize
-    encoder = nn.DataParallel(encoder)
-    decoder = nn.DataParallel(decoder)
-    
+   
     # Move to GPU, if available
     decoder = decoder.to(device)
     encoder = encoder.to(device)
