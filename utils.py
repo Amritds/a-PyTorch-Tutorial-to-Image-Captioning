@@ -325,9 +325,9 @@ class RL_loss(_Loss):
 
     def forward(self, imgs, ground_truth, hypothesis, hyp_max, sum_top_scores):
 
-    advantage = self.reward_function(imgs, hypothesis, ground_truth) - self.reward_function(imgs, hyp_max, ground_truth)
-    weighted_sum_top_scores = advantage * sum_top_scores
-    return ((-1) * weighted_sum_top_scores.mean()) # Important!!! use negative sum of expected rewards to treat as minimization problem. 
+        advantage = self.reward_function(imgs, hypothesis, ground_truth) - self.reward_function(imgs, hyp_max, ground_truth)
+        weighted_sum_top_scores = advantage * sum_top_scores
+        return ((-1) * weighted_sum_top_scores.mean()) # Important!!! use negative sum of expected rewards to treat as minimization problem. 
 
 def image_comparison_reward(imgs, hypothesis, ground_truth=None):
     # Note: Ground truth captions not required.
