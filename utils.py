@@ -21,19 +21,11 @@ from StackGAN.code.main_sampler import sample as image_generator
 data_folder = '/scratch/scratch5/adsue/caption_data'  # folder with data files saved by create_input_files.py
 data_name = 'coco_5_cap_per_img_5_min_word_freq'  # base name shared by data files
 
-# Read word map and create reverse wordmap.
-
-word_map_file = os.path.join(data_folder, 'WORDMAP_' + data_name + '.json')
-with open(word_map_file, 'r') as j:
-    word_map = json.load(j)
-
-rev_word_map = {v: k for k, v in word_map.items()}  # ix2word
-
-
 # Use to compute cosine similarity between resnet encodings.
 comparison_encoder = Encoder(fully_connected=True)
 cos = CosineSimilarity(dim=1, eps=1e-6)
 
+global word_map, rev_word_map
 
 def read_img(path):
     img = imread(path)
@@ -62,7 +54,9 @@ def create_input_files(dataset, karpathy_json_path, image_folder, captions_per_i
     """
 
     assert dataset in {'coco', 'flickr8k', 'flickr30k'}
-
+    
+    global word_map, rev_word_map
+    
     # Read Karpathy JSON
     with open(karpathy_json_path, 'r') as j:
         data = json.load(j)
@@ -120,6 +114,9 @@ def create_input_files(dataset, karpathy_json_path, image_folder, captions_per_i
     with open(os.path.join(output_folder, 'WORDMAP_' + base_filename + '.json'), 'w') as j:
         json.dump(word_map, j)
 
+    # Create the reverse word map
+    rev_word_map = {v: k for k, v in word_map.items()}  # ix2word    
+        
     # Sample captions for each image, save images to HDF5 file, and captions and their lengths to JSON files
     seed(123)
     for impaths, imcaps, split in [(train_image_paths, train_image_captions, 'TRAIN'),
