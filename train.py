@@ -269,7 +269,7 @@ def train_XE(train_loader, encoder, decoder, criterion, encoder_optimizer, decod
         caps = caps.to(device)
         caplens = caplens.to(device)
         
-        print('Forward prop...')
+        #print('Forward prop...')
         
         # Forward prop.
         encoder_out = encoder(imgs)
@@ -289,7 +289,7 @@ def train_XE(train_loader, encoder, decoder, criterion, encoder_optimizer, decod
         # Add doubly stochastic attention regularization
         loss += alpha_c * ((1. - alphas.sum(dim=1)) ** 2).mean()
 
-        print('Back prop...')
+        #print('Back prop...')
         
         # Back prop.
         decoder_optimizer.zero_grad()
