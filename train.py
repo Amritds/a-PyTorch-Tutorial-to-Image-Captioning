@@ -60,6 +60,8 @@ def main():
 
     global training_type, best_bleu4, best_reward, epochs_since_improvement, checkpoint, start_epoch, fine_tune_encoder, data_name, word_map, epochs
 
+    print('Loading model now...')
+    
     # Read word map
     word_map_file = os.path.join(data_folder, 'WORDMAP_' + data_name + '.json')
     with open(word_map_file, 'r') as j:
@@ -115,6 +117,8 @@ def main():
         CaptionDataset(data_folder, data_name, 'VAL', transform=transforms.Compose([normalize])),
         batch_size=batch_size, shuffle=True, num_workers=workers, pin_memory=True)
 
+    print('Starting training epochs now...')
+    
     # Training to maximize cross entropy and maximize sum of expected rewards.
     training_epochs(encoder, 
                     decoder,
@@ -256,7 +260,7 @@ def train_XE(train_loader, encoder, decoder, criterion, encoder_optimizer, decod
     # Batches
     for i, (imgs, caps, caplens) in enumerate(train_loader):
         data_time.update(time.time() - start)
-
+                
         # Move to GPU, if available
         imgs = imgs.to(device)
         caps = caps.to(device)
