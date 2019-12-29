@@ -25,7 +25,7 @@ data_name = 'coco_5_cap_per_img_5_min_word_freq'  # base name shared by data fil
 
 word_map_file = os.path.join(data_folder, 'WORDMAP_' + data_name + '.json')
 with open(word_map_file, 'r') as j:
-	word_map = json.load(j)
+    word_map = json.load(j)
 
 rev_word_map = {v: k for k, v in word_map.items()}  # ix2word
 
@@ -36,16 +36,16 @@ cos = CosineSimilarity(dim=1, eps=1e-6)
 
 
 def read_img(path):
-	img = imread(path)
-	if len(img.shape) == 2:
-		img = img[:, :, np.newaxis]
-		img = np.concatenate([img, img, img], axis=2)
-	img = imresize(img, (256, 256))
-	img = img.transpose(2, 0, 1)
-	assert img.shape == (3, 256, 256)
-	assert np.max(img) <= 255
+    img = imread(path)
+    if len(img.shape) == 2:
+        img = img[:, :, np.newaxis]
+        img = np.concatenate([img, img, img], axis=2)
+    img = imresize(img, (256, 256))
+    img = img.transpose(2, 0, 1)
+    assert img.shape == (3, 256, 256)
+    assert np.max(img) <= 255
 
-	return img
+    return img
 
 def create_input_files(dataset, karpathy_json_path, image_folder, captions_per_image, min_word_freq, output_folder,
                        max_len=100):
@@ -319,27 +319,26 @@ def accuracy(scores, targets, k):
     return correct_total.item() * (100.0 / batch_size)
 
 class RL_loss(_Loss):
-	def __init__(self, reward_function):
-		
-		super(RL_SCST_loss, self).__init__(size_average=None, reduce=None, reduction='mean')
-		self. reward_function = reward_function
+    def __init__(self, reward_function):
+        super(RL_SCST_loss, self).__init__(size_average=None, reduce=None, reduction='mean')
+    self. reward_function = reward_function
 
-	def forward(self, imgs, ground_truth, hypothesis, hyp_max, sum_top_scores):
+    def forward(self, imgs, ground_truth, hypothesis, hyp_max, sum_top_scores):
 
-		advantage = self.reward_function(imgs, hypothesis, ground_truth) - self.reward_function(imgs, hyp_max, ground_truth)
-		weighted_sum_top_scores = advantage * sum_top_scores
-		return ((-1) * weighted_sum_top_scores.mean()) # Important!!! use negative sum of expected rewards to treat as minimization problem. 
+    advantage = self.reward_function(imgs, hypothesis, ground_truth) - self.reward_function(imgs, hyp_max, ground_truth)
+    weighted_sum_top_scores = advantage * sum_top_scores
+    return ((-1) * weighted_sum_top_scores.mean()) # Important!!! use negative sum of expected rewards to treat as minimization problem. 
 
 def image_comparison_reward(imgs, hypothesis, ground_truth=None):
-	# Note: Ground truth captions not required.
-	# Translate and save the hypothesis as plain text.
-	words = [rev_word_map[ind] for ind in hypothesis]
+    # Note: Ground truth captions not required.
+    # Translate and save the hypothesis as plain text.
+    words = [rev_word_map[ind] for ind in hypothesis]
 
-	minibatch_words_path = os.path.join(data_folder, 'mini_batch_captions.txt')
+    minibatch_words_path = os.path.join(data_folder, 'mini_batch_captions.txt')
 
-	with open(minibatch_words_path, 'w') as f:
-		for wo in words:
-			f.write(' '.join(' ') + '\n')
+    with open(minibatch_words_path, 'w') as f:
+        for wo in words:
+            f.write(' '.join(' ') + '\n')
 
     # Get encoding (saved as a torchfile)
     subprocess.call('bash ./encode_text.sh')
@@ -354,14 +353,14 @@ def image_comparison_reward(imgs, hypothesis, ground_truth=None):
     # compute similarity
     similarity = cos(encoded_original, encoded_recreation)
 
-	return similarity
+    return similarity
 
 def BLEU_reward(imgs, hypothesis, ground_truth):
-	# Note: images not used.
+    # Note: images not used.
 
-	img_caps = ground_truth.tolist()
+    img_caps = ground_truth.tolist()
     img_captions = list(
         map(lambda c: [w for w in c if w not in {word_map['<start>'], word_map['<end>'], word_map['<pad>']}],
             img_caps))  # remove <start> and pads
 
-	return corpus_bleu(img_captions, hypothesis)
+    return corpus_bleu(img_captions, hypothesis)
