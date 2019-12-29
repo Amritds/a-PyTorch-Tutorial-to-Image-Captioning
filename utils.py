@@ -337,9 +337,9 @@ def image_comparison_reward(imgs, hypothesis, ground_truth=None):
 
 	minibatch_words_path = os.path.join(data_folder, 'mini_batch_captions.txt')
 
-    with open(minibatch_words_path,'w') as f:
-    	for wo in words:
-    		f.write(' '.join(' ') + '\n')
+	with open(minibatch_words_path,'w') as f:
+		for wo in words:
+			f.write(' '.join(' ') + '\n')
 
     # Get encoding (saved as a torchfile)
     subprocess.call('bash ./encode_text.sh')
