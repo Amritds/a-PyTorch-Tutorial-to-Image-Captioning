@@ -37,7 +37,7 @@ desired_training_type = 'XE'
 training_type = desired_training_type
 
 reward_map ={'RL_recreation' : image_comparison_reward,
-			 'RL_bleu' : BLEU_reward}
+             'RL_bleu' : BLEU_reward}
 
 best_bleu4 = 0.  # BLEU-4 score right now
 best_reward = 0. # Avg Reward right now
@@ -97,9 +97,9 @@ def main():
 
         # Reset training parameters if desired training type and training type do not match.
         if training_type != desired_training_type:
-        	training_type = desired_training_type
-        	epochs_since_improvement = 0
-        	start_epoch=0
+            training_type = desired_training_type
+            epochs_since_improvement = 0
+            start_epoch=0
 
     # Move to GPU, if available
     decoder = decoder.to(device)
@@ -117,8 +117,8 @@ def main():
 
     # Training to maximize cross entropy and maximize sum of expected rewards.
     training_epochs(encoder, 
-    				decoder,
-    				encoder_optimizer,
+                    decoder,
+                    encoder_optimizer,
                     decoder_optimizer,
                     train_loader,
                     val_loader,
@@ -127,27 +127,27 @@ def main():
 
 
 def training_epochs(encoder, decoder, encoder_optimizer, decoder_optimizer, train_loader, val_loader, device):
-	"""
-	Runs training epochs with checkpointing.
-	 :param train_type: Objective of:
-	                         (1)Maximizing Cross-Entropy
-	 				         (2)Maximizing Expected Reward using the SCST algorithm.
-	"""
+    """
+    Runs training epochs with checkpointing.
+     :param train_type: Objective of:
+                             (1)Maximizing Cross-Entropy
+                             (2)Maximizing Expected Reward using the SCST algorithm.
+    """
 
-	global training_type, best_bleu4, best_reward, epochs_since_improvement, checkpoint, start_epoch, fine_tune_encoder, data_name, word_map, epochs_XE, epochs_RL
+    global training_type, best_bleu4, best_reward, epochs_since_improvement, checkpoint, start_epoch, fine_tune_encoder, data_name, word_map, epochs_XE, epochs_RL
 
-	for epoch in range(start_epoch, epochs_XE):
+    for epoch in range(start_epoch, epochs_XE):
 
-		# Decay learning rate if there is no improvement for 8 consecutive epochs, and terminate training after 20
+        # Decay learning rate if there is no improvement for 8 consecutive epochs, and terminate training after 20
         if epochs_since_improvement == 20:
-        	break
+            break
         if epochs_since_improvement > 0 and epochs_since_improvement % 8 == 0:
-        	adjust_learning_rate(decoder_optimizer, 0.8)
+            adjust_learning_rate(decoder_optimizer, 0.8)
             if fine_tune_encoder:
-            	adjust_learning_rate(encoder_optimizer, 0.8)
+                adjust_learning_rate(encoder_optimizer, 0.8)
 
-	# BEGIN XE Training --------------------------------------------
-	if training_type == 'XE':
+    # BEGIN XE Training --------------------------------------------
+    if training_type == 'XE':
         
             # One epoch's training using the Cross Entropy Loss function ------------------------------------
             criterion_XE = nn.CrossEntropyLoss().to(device)
@@ -185,50 +185,49 @@ def training_epochs(encoder, decoder, encoder_optimizer, decoder_optimizer, trai
     # BEGIN RL TRAINING -------------------------------
     elif training_type[:2] == 'RL'
 
-    	for epoch in range(start_epoch, epochs_RL):
+        for epoch in range(start_epoch, epochs_RL):
 
-    		# Decay learning rate if there is no improvement for 8 consecutive epochs, and terminate training after 20
-        	if epochs_since_improvement == 20:
-            	break
-        	if epochs_since_improvement > 0 and epochs_since_improvement % 8 == 0:
-            	adjust_learning_rate(decoder_optimizer, 0.8)
-            	if fine_tune_encoder:
-                	adjust_learning_rate(encoder_optimizer, 0.8)
+            # Decay learning rate if there is no improvement for 8 consecutive epochs, and terminate training after 20
+            if epochs_since_improvement == 20:
+                break
+            if epochs_since_improvement > 0 and epochs_since_improvement % 8 == 0:
+                adjust_learning_rate(decoder_optimizer, 0.8)
+                if fine_tune_encoder:
+                    adjust_learning_rate(encoder_optimizer, 0.8)
 
-        	# One epoch's training maximizing the sum of expected rewards loss function
-			
-			reward_function = reward_map[training_type]				
+            # One epoch's training maximizing the sum of expected rewards loss function
+            
+            reward_function = reward_map[training_type]
+            criterion = RL_loss(reward_function).to(device)
 
-			criterion = RL_loss(reward_function).to(device)
-
-        	train_RL(train_loader=train_loader,
-            	     encoder=encoder,
-                	 decoder=decoder,
-                 	 criterion=criterion,
-                 	 encoder_optimizer=encoder_optimizer,
+            train_RL(train_loader=train_loader,
+                     encoder=encoder,
+                     decoder=decoder,
+                     criterion=criterion,
+                     encoder_optimizer=encoder_optimizer,
                      decoder_optimizer=decoder_optimizer,
-                 	 epoch=epoch)
+                     epoch=epoch)
 
-        	#-------------------------------------------------------------------------------------------------
+        #-------------------------------------------------------------------------------------------------
 
-        	# One epoch's validation (Computes average reward for the epoch)
-        	recent_reward = validate_RL(val_loader=val_loader,
-            	                    	encoder=encoder,
-                	                	decoder=decoder,
-                	                	reward_function=reward_function)
+            # One epoch's validation (Computes average reward for the epoch)
+            recent_reward = validate_RL(val_loader=val_loader,
+                                        encoder=encoder,
+                                        decoder=decoder,
+                                        reward_function=reward_function)
 
-        	# Check if there was an improvement 
-        	is_best = recent_reward > best_reward
-        	best_reward = max(recent_reward, best_reward)
-        	if not is_best:
-            	epochs_since_improvement += 1
-            	print("\nEpochs since last improvement: %d\n" % (epochs_since_improvement,))
-        	else:
-            	epochs_since_improvement = 0
+            # Check if there was an improvement 
+            is_best = recent_reward > best_reward
+            best_reward = max(recent_reward, best_reward)
+            if not is_best:
+                epochs_since_improvement += 1
+                print("\nEpochs since last improvement: %d\n" % (epochs_since_improvement,))
+            else:
+                epochs_since_improvement = 0
 
-        	# Save checkpoint
-        	save_checkpoint(data_name, epoch, epochs_since_improvement, encoder, decoder, encoder_optimizer,
-            	            decoder_optimizer, is_best, training_type, reward=recent_reward)  
+            # Save checkpoint
+            save_checkpoint(data_name, epoch, epochs_since_improvement, encoder, decoder, encoder_optimizer,
+                            decoder_optimizer, is_best, training_type, reward=recent_reward)  
 
 
 def train_XE(train_loader, encoder, decoder, criterion, encoder_optimizer, decoder_optimizer, epoch):
@@ -309,7 +308,7 @@ def train_XE(train_loader, encoder, decoder, criterion, encoder_optimizer, decod
         # Print status
         if i % print_freq == 0:
             print('Maximizing Cross-Entropy\n'
-            	  'Epoch: [{0}][{1}/{2}]\t'
+                  'Epoch: [{0}][{1}/{2}]\t'
                   'Batch Time {batch_time.val:.3f} ({batch_time.avg:.3f})\t'
                   'Data Load Time {data_time.val:.3f} ({data_time.avg:.3f})\t'
                   'Loss {loss.val:.4f} ({loss.avg:.4f})\t'
@@ -386,7 +385,7 @@ def train_RL(train_loader, encoder, decoder, criterion, encoder_optimizer, decod
         # Print status
         if i % print_freq == 0:
             print('Maximizing sum of Expected Rewards\n'
-            	  'Epoch: [{0}][{1}/{2}]\t'
+                  'Epoch: [{0}][{1}/{2}]\t'
                   'Batch Time {batch_time.val:.3f} ({batch_time.avg:.3f})\t'
                   'Data Load Time {data_time.val:.3f} ({data_time.avg:.3f})\t'
                   'Loss {loss.val:.4f} ({loss.avg:.4f})\t'
@@ -538,9 +537,9 @@ def validate_RL(val_loader, encoder, decoder, reward_function):
 
             encoder_out = encoder(imgs)
         
-        	# Notice, we are not sampling here! We are using greedy decoding.
-        	(hypotheses, sum_top_scores) = get_hypothesis_greedy(encoder_out, sample=False)
-     		
+            # Notice, we are not sampling here! We are using greedy decoding.
+            (hypotheses, sum_top_scores) = get_hypothesis_greedy(encoder_out, sample=False)
+     
             batch_time.update(time.time() - start)
 
             batch_avg_reward = reward_function(imgs, hypotheses, caps).mean()
