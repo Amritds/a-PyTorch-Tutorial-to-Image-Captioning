@@ -36,16 +36,16 @@ cos = CosineSimilarity(dim=1, eps=1e-6)
 
 
 def read_img(path):
-    img = imread(path)
-    if len(img.shape) == 2:
-    	img = img[:, :, np.newaxis]
-        img = np.concatenate([img, img, img], axis=2)
-    img = imresize(img, (256, 256))
-    img = img.transpose(2, 0, 1)
-    assert img.shape == (3, 256, 256)
-    assert np.max(img) <= 255
+	img = imread(path)
+	if len(img.shape) == 2:
+		img = img[:, :, np.newaxis]
+		img = np.concatenate([img, img, img], axis=2)
+	img = imresize(img, (256, 256))
+	img = img.transpose(2, 0, 1)
+	assert img.shape == (3, 256, 256)
+	assert np.max(img) <= 255
 
-    return img
+	return img
 
 def create_input_files(dataset, karpathy_json_path, image_folder, captions_per_image, min_word_freq, output_folder,
                        max_len=100):
