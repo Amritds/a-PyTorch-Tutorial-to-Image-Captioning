@@ -183,7 +183,7 @@ def training_epochs(encoder, decoder, encoder_optimizer, decoder_optimizer, trai
 
 
     # BEGIN RL TRAINING -------------------------------
-    elif training_type[:2] == 'RL'
+    elif training_type[:2] == 'RL':
 
         for epoch in range(start_epoch, epochs_RL):
 
