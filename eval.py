@@ -75,11 +75,10 @@ def evaluate(beam_size):
 
 
 def get_captions_and_hypothesis(image, caps, caplens, allcaps):
-	k = beam_size
+    k = beam_size
 
     # Move to GPU device, if available
     image = image.to(device)  # (1, 3, 256, 256)
-
     # Encode
     encoder_out = encoder(image)  # (1, enc_image_size, enc_image_size, encoder_dim)
     enc_image_size = encoder_out.size(1)
@@ -206,7 +205,7 @@ def get_hypothesis_greedy(encoder_out, sample=False):
     # Note: Batch size changes as generated sequences come to an <end>. 
     while True:
 
-    	# Update the indexes of sequences that are incomplete.
+        # Update the indexes of sequences that are incomplete.
         incomplete_inds = [ind for ind, last_word in enumerate(seqs[:,-1]) if last_word != word_map['<end>']]
 
         embeddings = decoder.embedding(prev_words[incomplete_inds]).squeeze(1)  # (batch_size, embed_dim)
@@ -222,14 +221,13 @@ def get_hypothesis_greedy(encoder_out, sample=False):
         scores = F.log_softmax(scores, dim=1) #(batch_size, vocab_size) 
 
         if sample:
-        	probs = torch.exp(scores)
-        	categorical_distribution = torch.distributions.Categorical(probs)
-        	
-        	top_words = categorical_distribution.sample() # (batch_size)
-        	top_scores = scores[range(scores.size(0)), top_words] # (batch_size) 
+            probs = torch.exp(scores)
+            categorical_distribution = torch.distributions.Categorical(probs)
+            top_words = categorical_distribution.sample() # (batch_size)
+            top_scores = scores[range(scores.size(0)), top_words] # (batch_size) 
 
         else:
-        	top_scores, top_words = scores.topk(1, 0, True, True)  # (batch_size) (batch_size)
+            top_scores, top_words = scores.topk(1, 0, True, True)  # (batch_size) (batch_size)
         
         # Convert unrolled indices to actual indices of scores
         next_word_inds = top_words % vocab_size  # (batch_size)
