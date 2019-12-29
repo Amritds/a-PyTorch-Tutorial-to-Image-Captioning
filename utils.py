@@ -318,7 +318,7 @@ def accuracy(scores, targets, k):
 class RL_loss(_Loss):
     def __init__(self, reward_function):
         super(RL_SCST_loss, self).__init__(size_average=None, reduce=None, reduction='mean')
-    self. reward_function = reward_function
+        self.reward_function = reward_function
 
     def forward(self, imgs, ground_truth, hypothesis, hyp_max, sum_top_scores):
 
