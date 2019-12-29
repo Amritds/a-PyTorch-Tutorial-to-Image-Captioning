@@ -47,10 +47,10 @@ fine_tune_encoder = False  # fine-tune encoder?
 checkpoint = None  # path to checkpoint, None if none
 
 # Training parameters (Cross Entropy Maximization)
-epochs_XE = 1#120  # number of epochs to train for (if early stopping is not triggered)
+epochs_XE = 40  # number of epochs to train for (if early stopping is not triggered)
 
 # Training parameters (Expected Reward Maximization)
-epochs_RL = 0#120  # number of epochs to train for (if early stopping is not triggered)
+epochs_RL = 0  # number of epochs to train for (if early stopping is not triggered)
 
 
 def main():
@@ -140,19 +140,18 @@ def training_epochs(encoder, decoder, encoder_optimizer, decoder_optimizer, trai
 
     global training_type, best_bleu4, best_reward, epochs_since_improvement, checkpoint, start_epoch, fine_tune_encoder, data_name, word_map, epochs_XE, epochs_RL
 
-    for epoch in range(start_epoch, epochs_XE):
-
-        # Decay learning rate if there is no improvement for 8 consecutive epochs, and terminate training after 20
-        if epochs_since_improvement == 20:
-            break
-        if epochs_since_improvement > 0 and epochs_since_improvement % 8 == 0:
-            adjust_learning_rate(decoder_optimizer, 0.8)
-            if fine_tune_encoder:
-                adjust_learning_rate(encoder_optimizer, 0.8)
-
     # BEGIN XE Training --------------------------------------------
     if training_type == 'XE':
-        
+        for epoch in range(start_epoch, epochs_XE):
+
+            # Decay learning rate if there is no improvement for 8 consecutive epochs, and terminate training after 20
+            if epochs_since_improvement == 20:
+                break
+            if epochs_since_improvement > 0 and epochs_since_improvement % 8 == 0:
+                adjust_learning_rate(decoder_optimizer, 0.8)
+                if fine_tune_encoder:
+                    adjust_learning_rate(encoder_optimizer, 0.8)        
+            
             # One epoch's training using the Cross Entropy Loss function ------------------------------------
             criterion_XE = nn.CrossEntropyLoss().to(device)
             
