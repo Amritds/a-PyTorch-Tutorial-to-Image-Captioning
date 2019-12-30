@@ -154,12 +154,12 @@ def training_epochs(encoder, decoder, encoder_optimizer, decoder_optimizer, trai
                     adjust_learning_rate(encoder_optimizer, 0.8)        
             
             # One epoch's training using the Cross Entropy Loss function ------------------------------------
-            criterion_XE = nn.CrossEntropyLoss().to(device)
+            criterion = nn.CrossEntropyLoss().to(device)
             
             train_XE(train_loader=train_loader,
                      encoder=encoder,
                      decoder=decoder,
-                     criterion=criterion_XE,
+                     criterion=criterion,
                      encoder_optimizer=encoder_optimizer,
                      decoder_optimizer=decoder_optimizer,
                      epoch=epoch)
