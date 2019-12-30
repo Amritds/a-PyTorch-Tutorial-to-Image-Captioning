@@ -324,7 +324,8 @@ def train_XE(train_loader, encoder, decoder, criterion, encoder_optimizer, decod
                                                                           batch_time=batch_time,
                                                                           data_time=data_time, loss=losses,
                                                                           top5=top5accs))
-
+        break
+            
 def train_RL(train_loader, encoder, decoder, criterion, encoder_optimizer, decoder_optimizer, epoch):
     """
     Performs one epoch's training for Expected rewards maximization.
@@ -403,7 +404,8 @@ def train_RL(train_loader, encoder, decoder, criterion, encoder_optimizer, decod
                                                                           top5=top5accs))
 
 
-
+        break
+        
 def validate_XE(val_loader, encoder, decoder, criterion):
     """
     Performs one epoch's validation.
@@ -497,6 +499,8 @@ def validate_XE(val_loader, encoder, decoder, criterion):
 
             assert len(references) == len(hypotheses)
 
+            break
+            
         # Calculate BLEU-4 scores
         bleu4 = corpus_bleu(references, hypotheses)
 
@@ -561,7 +565,7 @@ def validate_RL(val_loader, encoder, decoder, reward_function):
                       'Batch Time {batch_time.val:.3f} ({batch_time.avg:.3f})\t'
                       'Minibatch Average Reward:{batch_avg_reward:.3f}')
 
-           
+            break
         avg_reward = sum_avg_rewards/counter
 
         print(
