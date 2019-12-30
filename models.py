@@ -19,16 +19,16 @@ class Encoder(nn.Module):
         # Remove linear and pool layers (since we're not doing classification)
         if fully_connected:
             modules = list(resnet.children())
-        	self.resnet = nn.Sequential(*modules)
-        	self.fine_tune(fine_tune=False)
+            self.resnet = nn.Sequential(*modules)
+            self.fine_tune(fine_tune=False)
         else:
-        	modules = list(resnet.children())[:-2]       
-        	self.resnet = nn.Sequential(*modules)
+            modules = list(resnet.children())[:-2]       
+            self.resnet = nn.Sequential(*modules)
 
-        	# Resize image to fixed size to allow input images of variable size
-        	self.adaptive_pool = nn.AdaptiveAvgPool2d((encoded_image_size, encoded_image_size))
+            # Resize image to fixed size to allow input images of variable size
+            self.adaptive_pool = nn.AdaptiveAvgPool2d((encoded_image_size, encoded_image_size))
 
-        	self.fine_tune()
+            self.fine_tune()
 
     def forward(self, images):
         """
