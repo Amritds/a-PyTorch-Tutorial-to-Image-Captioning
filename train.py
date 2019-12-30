@@ -23,6 +23,8 @@ dropout = 0.5
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")  # sets device for model and PyTorch tensors
 cudnn.benchmark = True  # set to true only if inputs to model are fixed size; otherwise lot of computational overhead
 
+print('Device type: ', device)
+
 # Training parameters (General)
 start_epoch = 0
 epochs_since_improvement = 0  # keeps track of number of epochs since there's been an improvement in validation BLEU
@@ -81,6 +83,15 @@ def main():
         encoder_optimizer = torch.optim.Adam(params=filter(lambda p: p.requires_grad, encoder.parameters()),
                                              lr=encoder_lr) if fine_tune_encoder else None
 
+        
+        num_of_devices = torch.cuda.device_count()
+        
+        if num_of_devices > 1: 
+            encoder = nn.DataParallel(encoder) #enabling data parallelism
+            decoder = nn.DataParallel(decoder)
+            
+        print('Number of devices available: ', num_of_devices)
+    
     else:
         checkpoint = torch.load(checkpoint)
         start_epoch = checkpoint['epoch'] + 1
