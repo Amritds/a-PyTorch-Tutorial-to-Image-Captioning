@@ -283,6 +283,14 @@ def train_XE(train_loader, encoder, decoder, criterion, encoder_optimizer, decod
         encoder_out = encoder(imgs)
         scores, caps_sorted, decode_lengths, alphas, sort_ind = decoder(encoder_out, caps, caplens)
 
+        # Sort gathered results in decreasing order -- corrects for jumbling of using multiple GPUs
+        decode_lengths, decode_sort_ind = decode_lengths.sort(dim=0, descending=True)
+        decode_lengths = decode_lengths.tolist()
+        scores = scores[decode_sort_ind]
+        caps_sorted = caps_sorted[decode_sort_ind]
+        alphas = alphas[decode_sort_ind]
+        sort_ind = sort_ind[decode_sort_ind]
+
         # Since we decoded starting with <start>, the targets are all words after <start>, up to <end>
         targets = caps_sorted[:, 1:]
 
@@ -455,7 +463,15 @@ def validate_XE(val_loader, encoder, decoder, criterion):
             if encoder is not None:
                 imgs = encoder(imgs)
             scores, caps_sorted, decode_lengths, alphas, sort_ind = decoder(imgs, caps, caplens)
-
+            
+            # Sort gathered results in decreasing order -- corrects for jumbling of using multiple GPUs
+            decode_lengths, decode_sort_ind = decode_lengths.sort(dim=0, descending=True)
+            decode_lengths = decode_lengths.tolist()
+            scores = scores[decode_sort_ind]
+            caps_sorted = caps_sorted[decode_sort_ind]
+            alphas = alphas[decode_sort_ind]
+            sort_ind = sort_ind[decode_sort_ind]
+            
             # Since we decoded starting with <start>, the targets are all words after <start>, up to <end>
             targets = caps_sorted[:, 1:]
 
@@ -509,7 +525,7 @@ def validate_XE(val_loader, encoder, decoder, criterion):
             hypotheses.extend(preds)
 
             assert len(references) == len(hypotheses)
-
+            
             
             
         # Calculate BLEU-4 scores
