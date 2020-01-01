@@ -108,7 +108,7 @@ def get_captions_and_hypothesis(image, caps, caplens, allcaps):
 
     # Start decoding
     step = 1
-    h, c = decoder.init_hidden_state(encoder_out)
+    h, c = decoder.module.init_hidden_state(encoder_out)
 
     # s is a number less than or equal to k, because sequences are removed from this process once they hit <end>
     while True:
