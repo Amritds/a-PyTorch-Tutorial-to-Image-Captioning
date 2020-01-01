@@ -113,16 +113,16 @@ def get_captions_and_hypothesis(image, caps, caplens, allcaps):
     # s is a number less than or equal to k, because sequences are removed from this process once they hit <end>
     while True:
 
-        embeddings = decoder.embedding(k_prev_words).squeeze(1)  # (s, embed_dim)
+        embeddings = decoder.module.embedding(k_prev_words).squeeze(1)  # (s, embed_dim)
 
-        awe, _ = decoder.attention(encoder_out, h)  # (s, encoder_dim), (s, num_pixels)
+        awe, _ = decoder.module.attention(encoder_out, h)  # (s, encoder_dim), (s, num_pixels)
 
-        gate = decoder.sigmoid(decoder.f_beta(h))  # gating scalar, (s, encoder_dim)
+        gate = decoder.module.sigmoid(decoder.f_beta(h))  # gating scalar, (s, encoder_dim)
         awe = gate * awe
 
-        h, c = decoder.decode_step(torch.cat([embeddings, awe], dim=1), (h, c))  # (s, decoder_dim)
+        h, c = decoder.module.decode_step(torch.cat([embeddings, awe], dim=1), (h, c))  # (s, decoder_dim)
 
-        scores = decoder.fc(h)  # (s, vocab_size)
+        scores = decoder.module.fc(h)  # (s, vocab_size)
         scores = F.log_softmax(scores, dim=1)
 
         # Add
