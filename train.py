@@ -98,7 +98,7 @@ def main():
         training_type = checkpoint['training_type']
         epochs_since_improvement = checkpoint['epochs_since_improvement']
         best_bleu4 = checkpoint['bleu-4']
-        best_reward = checkpoint['best_reward']
+        best_reward = checkpoint['reward']
         decoder = checkpoint['decoder']
         decoder_optimizer = checkpoint['decoder_optimizer']
         encoder = checkpoint['encoder']
