@@ -113,7 +113,8 @@ def main():
             training_type = desired_training_type
             epochs_since_improvement = 0
             start_epoch=0
-
+            decoder = decoder.module
+            encode = encoder.module
    
     # Move to GPU, if available
     decoder = decoder.to(device)
