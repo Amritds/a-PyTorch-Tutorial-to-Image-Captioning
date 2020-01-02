@@ -380,8 +380,8 @@ def train_RL(train_loader, encoder, decoder, criterion, encoder_optimizer, decod
         # Forward prop.
         encoder_out = encoder(imgs)
         
-        (hypotheses, sum_top_scores) = get_hypothesis_greedy(encoder_out, sample=True)
-        (hyp_max, _) = get_hypothesis_greedy(encoder_out, sample=False)
+        (hypotheses, sum_top_scores) = get_hypothesis_greedy(encoder_out, decoder, sample=True)
+        (hyp_max, _) = get_hypothesis_greedy(encoder_out, decoder, sample=False)
         # Calculate loss
         loss = criterion(imgs, caps, hypotheses, hyp_max, sum_top_scores)
 

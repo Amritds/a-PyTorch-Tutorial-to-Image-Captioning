@@ -20,7 +20,7 @@ with open(word_map_file, 'r') as j:
 rev_word_map = {v: k for k, v in word_map.items()}
 vocab_size = len(word_map)
 
-def get_hypothesis_greedy(encoder_out, sample=False):
+def get_hypothesis_greedy(encoder_out, decoder, sample=False):
     
     batch_size = encoder_out.size(0)
     encoder_dim = encoder_out.size(-1)
