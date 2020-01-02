@@ -46,7 +46,7 @@ def get_hypothesis_greedy(encoder_out, decoder, sample=False):
     while True:
 
         # Update the indexes of sequences that are incomplete.
-        incomplete_inds = [ind for ind, last_word in enumerate(seqs[:,-1]) if last_word != word_map['<end>']]
+        incomplete_inds = [ind for ind, last_word in enumerate([sent[-1] for sent in seqs]) if last_word != word_map['<end>']]
 
         embeddings = decoder.embedding(prev_words[incomplete_inds]).squeeze(1)  # (batch_size, embed_dim)
 
