@@ -12,7 +12,7 @@ from tqdm import tqdm
 data_folder = '/scratch/scratch5/adsue/caption_data'  # folder with data files saved by create_input_files.py
 data_name = 'coco_5_cap_per_img_5_min_word_freq'  # base name shared by data files
 
-checkpoint = '/scratch/scratch5/adsue/caption_data/checkpoints/BEST_XE_checkpoint_4_coco_5_cap_per_img_5_min_word_freq.pth.tar'  # model checkpoint
+checkpoint = '/scratch/scratch5/adsue/caption_data/checkpoints/BEST_XE_checkpoint_7_coco_5_cap_per_img_5_min_word_freq.pth.tar'  # model checkpoint
 word_map_file = '/scratch/scratch5/adsue/caption_data/WORDMAP_coco_5_cap_per_img_5_min_word_freq.json'  # word map, ensure it's the same the data was encoded with and the model was trained with
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")  # sets device for model and PyTorch tensors
@@ -117,7 +117,7 @@ def get_captions_and_hypothesis(image, caps, caplens, allcaps):
 
         awe, _ = decoder.module.attention(encoder_out, h)  # (s, encoder_dim), (s, num_pixels)
 
-        gate = decoder.module.sigmoid(decoder.f_beta(h))  # gating scalar, (s, encoder_dim)
+        gate = decoder.module.sigmoid(decoder.module.f_beta(h))  # gating scalar, (s, encoder_dim)
         awe = gate * awe
 
         h, c = decoder.module.decode_step(torch.cat([embeddings, awe], dim=1), (h, c))  # (s, decoder_dim)

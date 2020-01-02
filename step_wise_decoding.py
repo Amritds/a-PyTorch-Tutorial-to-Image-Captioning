@@ -10,6 +10,10 @@ from tqdm import tqdm
 
 word_map_file = '/scratch/scratch5/adsue/caption_data/WORDMAP_coco_5_cap_per_img_5_min_word_freq.json'  # word map, ensure it's the same the data was encoded with and the model was trained with
 
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")  # sets device for model and PyTorch tensors
+cudnn.benchmark = True  # set to true only if inputs to model are fixed size; otherwise lot of computational overhead
+
+
 # Load word map (word2ix)
 with open(word_map_file, 'r') as j:
     word_map = json.load(j)
