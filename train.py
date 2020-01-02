@@ -86,7 +86,7 @@ def main():
         
         num_of_devices = torch.cuda.device_count()
         
-        if num_of_devices > 1: 
+        if num_of_devices > 1 and desired_training_type == 'XE': 
             encoder = nn.DataParallel(encoder) #enabling data parallelism
             decoder = nn.DataParallel(decoder)
             
