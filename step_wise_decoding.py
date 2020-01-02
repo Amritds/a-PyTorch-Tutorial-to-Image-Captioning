@@ -46,7 +46,7 @@ def get_hypothesis_greedy(encoder_out, decoder, sample=False):
     while True:
 
         # Update the indexes of sequences that are incomplete.
-        print(enumerate(prev_words.squeeze(1).tolist()))
+        
         incomplete_inds = [ind for ind, last_word in enumerate(prev_words.squeeze(1).tolist()) if last_word != word_map['<end>']]
 
         embeddings = decoder.embedding(prev_words[incomplete_inds]).squeeze(1)  # (batch_size, embed_dim)
@@ -74,8 +74,6 @@ def get_hypothesis_greedy(encoder_out, decoder, sample=False):
         next_word_inds = top_words % vocab_size  # (batch_size)
         
         prev_words[incomplete_inds] = next_word_inds.unsqueeze(1) 
-        
-        
         
         # Add new words to sequences
         for (i, index) in enumerate(incomplete_inds):
