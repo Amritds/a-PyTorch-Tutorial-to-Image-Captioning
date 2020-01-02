@@ -70,10 +70,12 @@ def get_hypothesis_greedy(encoder_out, decoder, sample=False):
             top_scores, top_words = scores.topk(1, 0, True, True)  # (batch_size) (batch_size)
         
         # Convert unrolled indices to actual indices of scores
-        next_word_inds = top_words % vocab_size  # (batch_size)
+        next_word_inds = (top_words % vocab_size).tolist()  # (batch_size)
 
         # Add new words to sequences
-        seqs[incomplete_inds] = [sent + [w] for (sent,w) in zip(seqs[incomplete_inds], next_word_inds.tolist())]
+        for (i, index) in enumerate(incomplete_inds):
+            seqs[index].append(next_words_inds[i])
+        
        
         # sum scores of actions for incomplete sequences       
         sum_top_scores[incomplete_inds] += top_scores # Keep track of sum top scores for the REINFORCE algorithm.
