@@ -33,7 +33,7 @@ def get_hypothesis_greedy(encoder_out, decoder, sample=False):
     prev_words = torch.LongTensor([[word_map['<start>']]] * batch_size).to(device)  # (batch_size, 1)
 
     # Tensor to store generated sequences; now it is just <start>
-    seqs = prev_words  # (batch_size, 1)
+    seqs = prev_words.squeeze(1).tolist()  # (batch_size, 1)
 
     # Start decoding
     step = 1
@@ -73,7 +73,7 @@ def get_hypothesis_greedy(encoder_out, decoder, sample=False):
         next_word_inds = top_words % vocab_size  # (batch_size)
 
         # Add new words to sequences
-        seqs[incomplete_inds] = torch.cat([seqs[incomplete_inds], next_word_inds.unsqueeze(1)], dim=1)  # (1, step+1)
+        seqs[incomplete_inds] = cat([seqs[incomplete_inds], next_word_inds.tolist()], dim=1)  # (1, step+1)
 
         # sum scores of actions for incomplete sequences       
         sum_top_scores[incomplete_inds] += top_scores # Keep track of sum top scores for the REINFORCE algorithm.
