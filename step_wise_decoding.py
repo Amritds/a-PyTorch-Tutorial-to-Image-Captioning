@@ -42,12 +42,13 @@ def get_hypothesis_greedy(encoder_out, decoder, sample=False):
     # Keep track of sum top scores for the REINFORCE algorithm.
     sum_top_scores = torch.zeros(batch_size).to(device)
 
+    
+    # Update the indexes of sequences that are incomplete.    
+    incomplete_inds = [ind for ind, last_word in enumerate(prev_words.squeeze(1).tolist()) if last_word != word_map['<end>']]
+    
+    
     # Note: Batch size changes as generated sequences come to an <end>. 
-    while True:
-
-        # Update the indexes of sequences that are incomplete.
-        
-        incomplete_inds = [ind for ind, last_word in enumerate(prev_words.squeeze(1).tolist()) if last_word != word_map['<end>']]
+    while len(incomplete_inds)>0:
 
         embeddings = decoder.embedding(prev_words[incomplete_inds]).squeeze(1)  # (batch_size, embed_dim)
 
@@ -82,6 +83,10 @@ def get_hypothesis_greedy(encoder_out, decoder, sample=False):
        
         # sum scores of actions for incomplete sequences       
         sum_top_scores[incomplete_inds] += top_scores # Keep track of sum top scores for the REINFORCE algorithm.
+        
+        # Update the indexes of sequences that are incomplete.
+        
+        incomplete_inds = [ind for ind, last_word in enumerate(prev_words.squeeze(1).tolist()) if last_word != word_map['<end>']]
         
         # Break if things have been going on too long
         if step > 50:
