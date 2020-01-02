@@ -35,7 +35,7 @@ decoder_lr = 4e-4  # learning rate for decoder
 grad_clip = 5.  # clip gradients at an absolute value of
 alpha_c = 1.  # regularization parameter for 'doubly stochastic attention', as in the paper
 
-desired_training_type = 'XE'
+desired_training_type = 'RL_recreation'
 training_type = desired_training_type
 
 reward_map ={'RL_recreation' : image_comparison_reward,
@@ -46,13 +46,13 @@ best_reward = 0. # Avg Reward right now
 
 print_freq = 100  # print training/validation stats every __ batches
 fine_tune_encoder = False  # fine-tune encoder?
-checkpoint = None  # path to checkpoint, None if none
+checkpoint = '/scratch/scratch5/adsue/caption_data/checkpoints/BEST_XE_checkpoint_7_coco_5_cap_per_img_5_min_word_freq.pth.tar'  # path to checkpoint, None if none
 
 # Training parameters (Cross Entropy Maximization)
-epochs_XE = 40  # number of epochs to train for (if early stopping is not triggered)
+epochs_XE = 0  # number of epochs to train for (if early stopping is not triggered)
 
 # Training parameters (Expected Reward Maximization)
-epochs_RL = 0  # number of epochs to train for (if early stopping is not triggered)
+epochs_RL = 40  # number of epochs to train for (if early stopping is not triggered)
 
 
 def main():
