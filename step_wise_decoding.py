@@ -40,7 +40,7 @@ def get_hypothesis_greedy(encoder_out, decoder, sample=False):
     H, C = decoder.init_hidden_state(encoder_out)
 
     # Keep track of sum top scores for the REINFORCE algorithm.
-    sum_top_scores = torch.zeros(batch_size)
+    sum_top_scores = torch.zeros(batch_size).to(device)
 
     # Note: Batch size changes as generated sequences come to an <end>. 
     while True:
