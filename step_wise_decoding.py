@@ -8,6 +8,14 @@ from nltk.translate.bleu_score import corpus_bleu
 import torch.nn.functional as F
 from tqdm import tqdm
 
+word_map_file = '/scratch/scratch5/adsue/caption_data/WORDMAP_coco_5_cap_per_img_5_min_word_freq.json'  # word map, ensure it's the same the data was encoded with and the model was trained with
+
+# Load word map (word2ix)
+with open(word_map_file, 'r') as j:
+    word_map = json.load(j)
+rev_word_map = {v: k for k, v in word_map.items()}
+vocab_size = len(word_map)
+
 def get_hypothesis_greedy(encoder_out, sample=False):
     
     batch_size = encoder_out.size(0)
