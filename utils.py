@@ -331,7 +331,7 @@ def image_comparison_reward(imgs, hypothesis, ground_truth=None):
     # Translate and save the hypothesis as plain text.
     
     # Load word map from JSON
-    with open(os.path.join(output_folder, 'WORDMAP_' + base_filename + '.json'), 'r') as j:
+    with open(os.path.join('/scratch/scratch5/adsue/caption_data', 'WORDMAP_' + base_filename + '.json'), 'r') as j:
         word_map = json.loads(j)
 
     # Create the reverse word map
