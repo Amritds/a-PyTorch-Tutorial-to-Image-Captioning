@@ -78,7 +78,7 @@ def get_hypothesis_greedy(encoder_out, decoder, sample=False):
         
         # Add new words to sequences
         for (i, index) in enumerate(incomplete_inds):
-            seqs[index].append(next_word_inds[i])
+            seqs[index].append(next_word_inds[i].item())
         
        
         # sum scores of actions for incomplete sequences       
