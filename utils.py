@@ -332,7 +332,7 @@ def image_comparison_reward(imgs, hypothesis, ground_truth=None):
     
     # Load word map from JSON
     with open(os.path.join('/scratch/scratch5/adsue/caption_data', 'WORDMAP_' + data_name + '.json'), 'r') as j:
-        word_map = json.loads(j)
+        word_map = json.load(j)
 
     # Create the reverse word map
     rev_word_map = {v: k for k, v in word_map.items()}  # ix2word    
