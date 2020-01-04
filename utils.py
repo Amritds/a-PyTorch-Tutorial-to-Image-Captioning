@@ -337,13 +337,13 @@ def image_comparison_reward(imgs, hypothesis, ground_truth=None):
     # Create the reverse word map
     rev_word_map = {v: k for k, v in word_map.items()}  # ix2word    
     
-    words = [rev_word_map[ind] for ind in hypothesis]
+    sentences = [' '.join([rev_word_map[ind] for ind in sent]) for sent in hypothesis]
 
     minibatch_words_path = os.path.join(data_folder, 'mini_batch_captions.txt')
 
     with open(minibatch_words_path, 'w') as f:
-        for wo in words:
-            f.write(' '.join(' ') + '\n')
+        for sent in sentences:
+            f.write(sent + '\n')
 
     # Get encoding (saved as a torchfile)
     subprocess.call('bash ./encode_text.sh')
