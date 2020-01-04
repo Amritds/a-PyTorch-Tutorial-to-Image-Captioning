@@ -69,7 +69,7 @@ def get_hypothesis_greedy(encoder_out, decoder, sample=False):
             top_scores = scores[range(scores.size(0)), top_words] # (batch_size) 
 
         else:
-            top_scores, top_words = scores.topk(1, 0, True, True)  # (batch_size) (batch_size)
+            top_scores, top_words = scores.max(1)  # (batch_size) (batch_size)
         
         # Convert unrolled indices to actual indices of scores
         next_word_inds = top_words % vocab_size  # (batch_size)
