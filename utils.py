@@ -329,6 +329,14 @@ class RL_loss(_Loss):
 def image_comparison_reward(imgs, hypothesis, ground_truth=None):
     # Note: Ground truth captions not required.
     # Translate and save the hypothesis as plain text.
+    
+    # Load word map from JSON
+    with open(os.path.join(output_folder, 'WORDMAP_' + base_filename + '.json'), 'r') as j:
+        word_map = json.loads(j)
+
+    # Create the reverse word map
+    rev_word_map = {v: k for k, v in word_map.items()}  # ix2word    
+    
     words = [rev_word_map[ind] for ind in hypothesis]
 
     minibatch_words_path = os.path.join(data_folder, 'mini_batch_captions.txt')
