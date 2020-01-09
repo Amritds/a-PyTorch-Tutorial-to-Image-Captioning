@@ -428,7 +428,7 @@ def train_RL(train_loader, encoder, decoder, criterion, encoder_optimizer, decod
         gc.collect()
         del loss
         del sum_top_scores
-        del hypothesis
+        del hypotheses
         del hyp_max
         
         
@@ -604,7 +604,7 @@ def validate_RL(val_loader, encoder, decoder, reward_function):
             gc.collect()
             del loss
             del sum_top_scores
-            del hypothesis
+            del hypotheses
             del hyp_max
             
             
