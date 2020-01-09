@@ -372,6 +372,5 @@ def BLEU_reward(imgs, hypothesis, ground_truth):
         map(lambda c: [w for w in c if w not in {word_map['<start>'], word_map['<end>'], word_map['<pad>']}],
             img_caps))  # remove <start> and pads
     
-    bleu_rewards = torch.Tensor([sentence_bleu([ref], hyp) for (ref, hyp) in zip(img_captions, hypothesis)])
-    bleu_rewards.to(device)
+    bleu_rewards = torch.Tensor([sentence_bleu([ref], hyp) for (ref, hyp) in zip(img_captions, hypothesis)]).to(device)
     return bleu_rewards
