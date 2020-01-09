@@ -14,6 +14,7 @@ from random import seed, choice, sample
 from models import Encoder
 
 from nltk.translate.bleu_score import corpus_bleu
+from nltk.translate.bleu_score import sentence_bleu
 
 from StackGAN.code.main_sampler import sample as image_generator
 
