@@ -371,4 +371,7 @@ def BLEU_reward(imgs, hypothesis, ground_truth):
         map(lambda c: [w for w in c if w not in {word_map['<start>'], word_map['<end>'], word_map['<pad>']}],
             img_caps))  # remove <start> and pads
 
+    # Format ground truth correctly
+    img_captions = [[x] for x in image_captions]
+    
     return corpus_bleu(img_captions, hypothesis)

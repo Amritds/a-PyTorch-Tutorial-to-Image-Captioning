@@ -28,7 +28,7 @@ print('Device type: ', device)
 # Training parameters (General)
 start_epoch = 0
 epochs_since_improvement = 0  # keeps track of number of epochs since there's been an improvement in validation BLEU
-batch_size = 64
+batch_size = 80
 workers = 0  # for data-loading; right now, only 1 works with h5py
 encoder_lr = 1e-4  # learning rate for encoder if fine-tuning
 decoder_lr = 4e-4  # learning rate for decoder
@@ -364,8 +364,8 @@ def train_RL(train_loader, encoder, decoder, criterion, encoder_optimizer, decod
 
     batch_time = AverageMeter()  # forward prop. + back prop. time
     data_time = AverageMeter()  # data loading time
-    losses = AverageMeter()  # loss (per word decoded)
-    top5accs = AverageMeter()  # top5 accuracy
+    losses = AverageMeter()  # loss (per caption)
+    
 
     start = time.time()
 
@@ -404,9 +404,9 @@ def train_RL(train_loader, encoder, decoder, criterion, encoder_optimizer, decod
             encoder_optimizer.step()
 
         # Keep track of metrics
-        top5 = accuracy(scores, targets, 5)
-        losses.update(loss.item(), sum(decode_lengths))
-        top5accs.update(top5, sum(decode_lengths))
+        
+        losses.update(loss.item(), batch_size)
+       
         batch_time.update(time.time() - start)
 
         start = time.time()
@@ -417,11 +417,10 @@ def train_RL(train_loader, encoder, decoder, criterion, encoder_optimizer, decod
                   'Epoch: [{0}][{1}/{2}]\t'
                   'Batch Time {batch_time.val:.3f} ({batch_time.avg:.3f})\t'
                   'Data Load Time {data_time.val:.3f} ({data_time.avg:.3f})\t'
-                  'Loss {loss.val:.4f} ({loss.avg:.4f})\t'
-                  'Top-5 Accuracy {top5.val:.3f} ({top5.avg:.3f})'.format(epoch, i, len(train_loader),
+                  'Loss {loss.val:.4f} ({loss.avg:.4f})'.format(epoch, i, len(train_loader),
                                                                           batch_time=batch_time,
-                                                                          data_time=data_time, loss=losses,
-                                                                          top5=top5accs))
+                                                                          data_time=data_time,
+                                                                          loss=losses))
 
 
         
