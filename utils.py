@@ -14,8 +14,9 @@ from random import seed, choice, sample
 from models import Encoder
 
 from nltk.translate.bleu_score import sentence_bleu
-
 from StackGAN.code.main_sampler import sample as image_generator
+
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")  # sets device for model and PyTorch tensors
 
 # Data parameters
 data_folder = '/scratch/scratch5/adsue/caption_data'  # folder with data files saved by create_input_files.py
@@ -371,4 +372,6 @@ def BLEU_reward(imgs, hypothesis, ground_truth):
         map(lambda c: [w for w in c if w not in {word_map['<start>'], word_map['<end>'], word_map['<pad>']}],
             img_caps))  # remove <start> and pads
     
-    return torch.Tensor([sentence_bleu([ref], hyp) for (ref, hyp) in zip(img_captions, hypothesis)])
+    bleu_rewards = torch.Tensor([sentence_bleu([ref], hyp) for (ref, hyp) in zip(img_captions, hypothesis)])
+    bleu_rewards.to(device)
+    return bleu_rewards
