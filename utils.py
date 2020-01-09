@@ -13,7 +13,7 @@ from collections import Counter
 from random import seed, choice, sample
 from models import Encoder
 
-from nltk.translate.bleu_score import corpus_bleu
+from nltk.translate.bleu_score import sentence_bleu
 
 from StackGAN.code.main_sampler import sample as image_generator
 
@@ -371,4 +371,4 @@ def BLEU_reward(imgs, hypothesis, ground_truth):
         map(lambda c: [w for w in c if w not in {word_map['<start>'], word_map['<end>'], word_map['<pad>']}],
             img_caps))  # remove <start> and pads
     
-    return torch.Tensor([corpus_bleu([ref], [hyp]) for (ref, hyp) in zip(img_captions, hypothesis)])
+    return torch.Tensor([sentence_bleu([ref], hyp) for (ref, hyp) in zip(img_captions, hypothesis)])
