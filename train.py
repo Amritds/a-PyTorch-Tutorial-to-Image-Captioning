@@ -592,9 +592,8 @@ def validate_RL(val_loader, encoder, decoder, reward_function):
 
             if i % print_freq == 0:
                 print('Validation: [{0}/{1}]\t'
-                      'Batch Time {batch_time.val:.3f} ({batch_time.avg:.3f})\t'
-                      'Minibatch Average Reward:{batch_avg_reward:.3f}'.format(i, len(val_loader), batch_time=batch_time,
-                                                                                batch_avg_reward=batch_avg_reward))
+                      'Batch Time {batch_time.val:.3f} ({batch_time.avg:.3f})\t'.format(i, len(val_loader), batch_time=batch_time))
+                print('Minibatch Average Reward:', batch_avg_reward=batch_avg_reward)
 
             # Force garbage collection.
             gc.collect()
