@@ -116,6 +116,7 @@ def main():
             start_epoch=0
             decoder = decoder.module
             encode = encoder.module
+            best_reward=0.
    
     # Move to GPU, if available
     decoder = decoder.to(device)
@@ -607,7 +608,7 @@ def validate_RL(val_loader, encoder, decoder, reward_function):
 
         
         
-    return avg_reward
+    return avg_reward.item()
 
 
 if __name__ == '__main__':
