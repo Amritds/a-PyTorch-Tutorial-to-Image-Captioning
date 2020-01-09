@@ -10,6 +10,7 @@ from step_wise_decoding import get_hypothesis_greedy
 from datasets import *
 from utils import *
 from nltk.translate.bleu_score import corpus_bleu
+import gc
 
 # Data parameters
 data_folder = '/scratch/scratch5/adsue/caption_data'  # folder with data files saved by create_input_files.py
@@ -422,7 +423,9 @@ def train_RL(train_loader, encoder, decoder, criterion, encoder_optimizer, decod
                                                                           data_time=data_time,
                                                                           loss=losses))
 
-
+        # Force garbage collection.
+        gc.collect()
+        break
         
         
 def validate_XE(val_loader, encoder, decoder, criterion):
@@ -599,6 +602,10 @@ def validate_RL(val_loader, encoder, decoder, reward_function):
             '\n * Epoch Average Reward- {avg_reward:.3f}\n'.format(
                 avg_reward=avg_reward))
 
+        # Force garbage collection.
+        gc.collect()
+        break
+        
     return avg_reward
 
 
