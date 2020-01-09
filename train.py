@@ -426,7 +426,7 @@ def train_RL(train_loader, encoder, decoder, criterion, encoder_optimizer, decod
 
         # Force garbage collection.
         gc.collect()
-        break
+        
         
         
 def validate_XE(val_loader, encoder, decoder, criterion):
@@ -598,7 +598,7 @@ def validate_RL(val_loader, encoder, decoder, reward_function):
 
             # Force garbage collection.
             gc.collect()
-            break
+            
             
         avg_reward = sum_avg_rewards/counter
 
