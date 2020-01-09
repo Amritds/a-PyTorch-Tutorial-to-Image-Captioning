@@ -372,6 +372,6 @@ def BLEU_reward(imgs, hypothesis, ground_truth):
             img_caps))  # remove <start> and pads
 
     # Format ground truth correctly
-    img_captions = [[x] for x in image_captions]
+    img_captions = [[x] for x in img_captions]
     
     return corpus_bleu(img_captions, hypothesis)

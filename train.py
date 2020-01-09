@@ -35,7 +35,7 @@ decoder_lr = 4e-4  # learning rate for decoder
 grad_clip = 5.  # clip gradients at an absolute value of
 alpha_c = 1.  # regularization parameter for 'doubly stochastic attention', as in the paper
 
-desired_training_type = 'RL_recreation'
+desired_training_type = 'RL_bleu'
 training_type = desired_training_type
 
 reward_map ={'RL_recreation' : image_comparison_reward,
