@@ -595,6 +595,9 @@ def validate_RL(val_loader, encoder, decoder, reward_function):
                       'Batch Time {batch_time.val:.3f} ({batch_time.avg:.3f})\t'
                       'Minibatch Average Reward:{batch_avg_reward:.3f}')
 
+            # Force garbage collection.
+            gc.collect()
+            break
             
         avg_reward = sum_avg_rewards/counter
 
@@ -602,9 +605,7 @@ def validate_RL(val_loader, encoder, decoder, reward_function):
             '\n * Epoch Average Reward- {avg_reward:.3f}\n'.format(
                 avg_reward=avg_reward))
 
-        # Force garbage collection.
-        gc.collect()
-        break
+        
         
     return avg_reward
 
