@@ -424,8 +424,12 @@ def train_RL(train_loader, encoder, decoder, criterion, encoder_optimizer, decod
                                                                           data_time=data_time,
                                                                           loss=losses))
 
-        # Force garbage collection.
+        # Free memory.
         gc.collect()
+        del loss
+        del sum_top_scores
+        del hypothesis
+        del hyp_max
         
         
         
@@ -596,8 +600,12 @@ def validate_RL(val_loader, encoder, decoder, reward_function):
                       'Batch Time {batch_time.val:.3f} ({batch_time.avg:.3f})\t'
                       'Minibatch Average Reward:'.format(i, len(val_loader), batch_time=batch_time, batch_avg_reward=batch_avg_reward))
 
-            # Force garbage collection.
+            # Free memory.
             gc.collect()
+            del loss
+            del sum_top_scores
+            del hypothesis
+            del hyp_max
             
             
         avg_reward = sum_avg_rewards/counter
