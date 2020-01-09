@@ -580,7 +580,7 @@ def validate_RL(val_loader, encoder, decoder, reward_function):
             encoder_out = encoder(imgs)
         
             # Notice, we are not sampling here! We are using greedy decoding.
-            (hypotheses, sum_top_scores) = get_hypothesis_greedy(encoder_out, sample=False)
+            (hypotheses, sum_top_scores) = get_hypothesis_greedy(encoder_out, decoder, sample=False)
      
             batch_time.update(time.time() - start)
 
