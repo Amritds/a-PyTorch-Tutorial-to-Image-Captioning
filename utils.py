@@ -346,7 +346,7 @@ def image_comparison_reward(imgs, hypothesis, ground_truth=None):
             f.write(sent + '\n')
 
     # Get encoding (saved as a torchfile)
-    subprocess.call('bash ./encode_text.sh')
+    os.system('bash ./encode_text.sh')
 
     # Generate images from encoded minbatch (saved to file)
     recreated_imgs = image_generator()
