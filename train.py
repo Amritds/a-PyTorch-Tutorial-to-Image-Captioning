@@ -602,10 +602,10 @@ def validate_RL(val_loader, encoder, decoder, reward_function):
 
             # Free memory.
             gc.collect()
-            del loss
+            
             del sum_top_scores
             del hypotheses
-            del hyp_max
+            
             
             
         avg_reward = sum_avg_rewards/counter
