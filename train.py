@@ -425,12 +425,11 @@ def train_RL(train_loader, encoder, decoder, criterion, encoder_optimizer, decod
                                                                           loss=losses))
 
         # Free memory.
-        gc.collect()
         del loss
         del sum_top_scores
         del hypotheses
         del hyp_max
-        
+        gc.collect()
         
         
 def validate_XE(val_loader, encoder, decoder, criterion):
@@ -600,11 +599,10 @@ def validate_RL(val_loader, encoder, decoder, reward_function):
                       'Batch Time {batch_time.val:.3f} ({batch_time.avg:.3f})\t'
                       'Minibatch Average Reward:'.format(i, len(val_loader), batch_time=batch_time, batch_avg_reward=batch_avg_reward))
 
-            # Free memory.
-            gc.collect()
-            
+            # Free memory
             del sum_top_scores
             del hypotheses
+            gc.collect()
             
             
             
