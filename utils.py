@@ -6,7 +6,7 @@ import json
 import torch
 import pickle
 from torch.nn.modules.loss import _Loss
-import torch.nn.functional as F
+from torch.nn import CosineSimilarity
 from scipy.misc import imread, imresize
 from tqdm import tqdm
 from collections import Counter
@@ -24,6 +24,7 @@ data_name = 'coco_5_cap_per_img_5_min_word_freq'  # base name shared by data fil
 
 # Use to compute cosine similarity between resnet encodings.
 comparison_encoder = Encoder(fully_connected=True)
+cos = CosineSimilarity(dim=1, eps=1e-6)
 
 global word_map, rev_word_map
 
@@ -356,7 +357,7 @@ def image_comparison_reward(imgs, hypothesis, ground_truth=None):
     encoded_recreation = comparison_encoder(recreated_imgs)
 
     # compute similarity
-    similarity = F.cosine_similarity(encoded_original, encoded_recreation, 1)
+    similarity = cos(encoded_original, encoded_recreation)
 
     return similarity
 
