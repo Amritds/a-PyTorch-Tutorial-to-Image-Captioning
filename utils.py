@@ -364,7 +364,7 @@ def image_comparison_reward(imgs, hypothesis, ground_truth=None):
 def BLEU_reward(imgs, hypothesis, ground_truth):
     # Note: images not used.
     
-    with open(os.path.join('/scratch/scratch5/adsue/caption_data', 'WORDMAP_' + data_name + '.json'), 'r') as j:
+    with open(os.path.join('/data2/adsue/caption_data', 'WORDMAP_' + data_name + '.json'), 'r') as j:
         word_map = json.load(j)
     
     img_caps = ground_truth.tolist()
