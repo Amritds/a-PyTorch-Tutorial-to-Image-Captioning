@@ -13,7 +13,7 @@ from nltk.translate.bleu_score import corpus_bleu
 import gc
 
 # Data parameters
-data_folder = '/scratch/scratch5/adsue/caption_data'  # folder with data files saved by create_input_files.py
+data_folder = '/data2/adsue/caption_data'  # folder with data files saved by create_input_files.py
 data_name = 'coco_5_cap_per_img_5_min_word_freq'  # base name shared by data files
 
 # Model parameters
@@ -47,7 +47,7 @@ best_reward = 0. # Avg Reward right now
 
 print_freq = 100  # print training/validation stats every __ batches
 fine_tune_encoder = False  # fine-tune encoder?
-checkpoint = '/scratch/scratch5/adsue/caption_data/checkpoints/BEST_XE_checkpoint_7_coco_5_cap_per_img_5_min_word_freq.pth.tar'  # path to checkpoint, None if none
+checkpoint = '/data2/adsue/caption_data/checkpoints/BEST_XE_checkpoint_7_coco_5_cap_per_img_5_min_word_freq.pth.tar'  # path to checkpoint, None if none
 
 # Training parameters (Cross Entropy Maximization)
 epochs_XE = 0  # number of epochs to train for (if early stopping is not triggered)
