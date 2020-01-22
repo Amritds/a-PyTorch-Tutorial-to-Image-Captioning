@@ -356,7 +356,7 @@ def image_comparison_reward(imgs, hypothesis, ground_truth=None):
 
     # Generate images from encoded minbatch (saved to file)
     recreated_imgs = image_generator()
-    recreated_imgs = torch.Tensor(recreated_imgs).to(device)
+    recreated_imgs = torch.Tensor(recreated_imgs).to(device).permute(0,3,1,2)
 
     # compute the encoding for recreated and original images
     encoded_original = comparison_encoder(imgs)
