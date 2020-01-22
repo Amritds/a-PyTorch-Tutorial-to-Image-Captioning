@@ -34,6 +34,17 @@ cos = CosineSimilarity(dim=1, eps=1e-6)
 
 global word_map, rev_word_map
 
+
+
+# Disable
+def blockPrint():
+    sys.stdout = open(os.devnull, 'w')
+
+# Restore
+def enablePrint():
+    sys.stdout = sys.__stdout__
+
+
 def read_img(path):
     img = imread(path)
     if len(img.shape) == 2:
@@ -328,8 +339,11 @@ class RL_loss(_Loss):
         self.reward_function = reward_function
 
     def forward(self, imgs, ground_truth, hypothesis, hyp_max, sum_top_scores):
-
+        
+        blockPrint() # Avoid verbose print statements
         advantage = self.reward_function(imgs, hypothesis, ground_truth) - self.reward_function(imgs, hyp_max, ground_truth)
+        enablePrint() # Re-enable print functionality
+        
         weighted_sum_top_scores = advantage * sum_top_scores
         return ((-1) * weighted_sum_top_scores.mean()) # Important!!! use negative sum of expected rewards to treat as minimization problem. 
 
@@ -381,15 +395,3 @@ def BLEU_reward(imgs, hypothesis, ground_truth):
     
     bleu_rewards = torch.Tensor([sentence_bleu([ref], hyp) for (ref, hyp) in zip(img_captions, hypothesis)]).to(device)
     return bleu_rewards
-
-
-# Disable
-def blockPrint():
-    sys.stdout = open(os.devnull, 'w')
-
-# Restore
-def enablePrint():
-    sys.stdout = sys.__stdout__
-
-
-print 'This will print'
