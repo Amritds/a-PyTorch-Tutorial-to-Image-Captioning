@@ -13,5 +13,4 @@ export CUDA_VISIBLE_DEVICES=${GPU}
 net_txt=${CUB_ENCODER} \
 queries=${CAPTION_PATH}.txt \
 filenames=${CAPTION_PATH}.t7 \
-
 th /home/iitm/a-PyTorch-Tutorial-to-Image-Captioning/get_embedding.lua
