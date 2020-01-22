@@ -11,7 +11,7 @@ from scipy.misc import imread, imresize
 from tqdm import tqdm
 from collections import Counter
 from random import seed, choice, sample
-from models import ComparisionEncoder
+from models import ComparisonEncoder
 
 from nltk.translate.bleu_score import sentence_bleu
 from StackGAN.code.main_sampler import sample as image_generator
