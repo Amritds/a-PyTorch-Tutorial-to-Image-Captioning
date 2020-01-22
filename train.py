@@ -115,7 +115,7 @@ def main():
             epochs_since_improvement = 0
             start_epoch=0
             decoder = decoder.module
-            encode = encoder.module
+            encoder = encoder.module
             best_reward=0.
    
     # Move to GPU, if available
