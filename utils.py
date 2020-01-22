@@ -23,6 +23,8 @@ data_folder = '/data2/adsue/caption_data'  # folder with data files saved by cre
 data_name = 'coco_5_cap_per_img_5_min_word_freq'  # base name shared by data files
 
 resnet = torchvision.models.resnet101(pretrained=True)
+for p in resnet.parameters():
+    p.requires_grad = False
 
 # Use to compute cosine similarity between resnet encodings.
 comparison_encoder = resnet.to(device)
