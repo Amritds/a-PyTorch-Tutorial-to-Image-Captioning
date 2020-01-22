@@ -1,4 +1,5 @@
 import os
+import sys
 import subprocess
 import numpy as np
 import h5py
@@ -380,3 +381,15 @@ def BLEU_reward(imgs, hypothesis, ground_truth):
     
     bleu_rewards = torch.Tensor([sentence_bleu([ref], hyp) for (ref, hyp) in zip(img_captions, hypothesis)]).to(device)
     return bleu_rewards
+
+
+# Disable
+def blockPrint():
+    sys.stdout = open(os.devnull, 'w')
+
+# Restore
+def enablePrint():
+    sys.stdout = sys.__stdout__
+
+
+print 'This will print'
