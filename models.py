@@ -61,7 +61,7 @@ class ComparisonEncoder(nn.Module):
     """
 
     def __init__(self, encoded_image_size=14):
-        super(Encoder, self).__init__()
+        super(ComparisonEncoder, self).__init__()
         self.enc_image_size = encoded_image_size
 
         resnet = torchvision.models.resnet101(pretrained=True)  # pretrained ImageNet ResNet-101
