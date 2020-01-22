@@ -12,7 +12,7 @@ from tqdm import tqdm
 from collections import Counter
 from random import seed, choice, sample
 from models import ComparisonEncoder
-
+import torchvision
 from nltk.translate.bleu_score import sentence_bleu
 from StackGAN.code.main_sampler import sample as image_generator
 
@@ -22,9 +22,10 @@ device = torch.device("cuda" if torch.cuda.is_available() else "cpu")  # sets de
 data_folder = '/data2/adsue/caption_data'  # folder with data files saved by create_input_files.py
 data_name = 'coco_5_cap_per_img_5_min_word_freq'  # base name shared by data files
 
+resnet = torchvision.models.resnet101(pretrained=True)
+
 # Use to compute cosine similarity between resnet encodings.
-comparison_encoder = ComparisonEncoder()
-comparison_encoder = comparison_encoder.to(device)
+comparison_encoder = resnet.to(device)
 
 cos = CosineSimilarity(dim=1, eps=1e-6)
 
