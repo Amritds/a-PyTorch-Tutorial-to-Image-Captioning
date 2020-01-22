@@ -55,6 +55,31 @@ class Encoder(nn.Module):
             for p in c.parameters():
                 p.requires_grad = fine_tune
 
+class ComparisonEncoder(nn.Module):
+    """
+    Comparision Encoder.
+    """
+
+    def __init__(self, encoded_image_size=14):
+        super(Encoder, self).__init__()
+        self.enc_image_size = encoded_image_size
+
+        resnet = torchvision.models.resnet101(pretrained=True)  # pretrained ImageNet ResNet-101
+        modules = list(resnet.children())
+        self.resnet = nn.Sequential(*modules)
+      
+         
+    def forward(self, images):
+        """
+        Forward propagation.
+
+        :param images: images, a tensor of dimensions (batch_size, 3, image_size, image_size)
+        :return: encoded images
+        """
+        out = self.resnet(images)  # (batch_size, 2048, image_size/32, image_size/32)
+     
+        return out
+
 
 class Attention(nn.Module):
     """

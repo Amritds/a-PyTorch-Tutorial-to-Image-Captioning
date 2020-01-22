@@ -11,7 +11,7 @@ from scipy.misc import imread, imresize
 from tqdm import tqdm
 from collections import Counter
 from random import seed, choice, sample
-from models import Encoder
+from models import ComparisionEncoder
 
 from nltk.translate.bleu_score import sentence_bleu
 from StackGAN.code.main_sampler import sample as image_generator
@@ -23,7 +23,7 @@ data_folder = '/data2/adsue/caption_data'  # folder with data files saved by cre
 data_name = 'coco_5_cap_per_img_5_min_word_freq'  # base name shared by data files
 
 # Use to compute cosine similarity between resnet encodings.
-comparison_encoder = Encoder(fully_connected=True)
+comparison_encoder = ComparisionEncoder()
 comparison_encoder = comparison_encoder.to(device)
 
 cos = CosineSimilarity(dim=1, eps=1e-6)
