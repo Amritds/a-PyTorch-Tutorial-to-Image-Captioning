@@ -19,7 +19,7 @@ from StackGAN.code.main_sampler import sample as image_generator
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")  # sets device for model and PyTorch tensors
 
 # Data parameters
-data_folder = '/scratch/scratch5/adsue/caption_data'  # folder with data files saved by create_input_files.py
+data_folder = '/data2/adsue/caption_data'  # folder with data files saved by create_input_files.py
 data_name = 'coco_5_cap_per_img_5_min_word_freq'  # base name shared by data files
 
 # Use to compute cosine similarity between resnet encodings.
@@ -332,7 +332,7 @@ def image_comparison_reward(imgs, hypothesis, ground_truth=None):
     # Translate and save the hypothesis as plain text.
     
     # Load word map from JSON
-    with open(os.path.join('/scratch/scratch5/adsue/caption_data', 'WORDMAP_' + data_name + '.json'), 'r') as j:
+    with open(os.path.join('/data2/adsue/caption_data', 'WORDMAP_' + data_name + '.json'), 'r') as j:
         word_map = json.load(j)
 
     # Create the reverse word map
