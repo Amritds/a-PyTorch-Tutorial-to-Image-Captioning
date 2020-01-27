@@ -8,7 +8,7 @@ device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 
 
-class LSTMCell(jit.ScriptModule):
+class LSTMCell(nn.Module):
     """
     Custom LSTM with attention fed only to the cell state
     (LSTMCell template taken from: https://github.com/pytorch/pytorch/blob/master/benchmarks/fastrnns/custom_lstms.py)
@@ -25,7 +25,6 @@ class LSTMCell(jit.ScriptModule):
         self.weight_ca = Parameter(torch.randn(hidden_size, attention_weighted_encoding_size))
         self.bias_ca = Parameter(torch.randn(hidden_size))
 
-    @jit.script_method
     def forward(self, input, hx, cx, attention_weighted_encoding):
         gates = (torch.mm(input, self.weight_ih.t()) + self.bias_ih +
                  torch.mm(hx, self.weight_hh.t()) + self.bias_hh)
