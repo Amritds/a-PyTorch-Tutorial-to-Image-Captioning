@@ -117,10 +117,7 @@ def get_captions_and_hypothesis(image, caps, caplens, allcaps):
 
         awe, _ = decoder.module.attention(encoder_out, h)  # (s, encoder_dim), (s, num_pixels)
 
-        gate = decoder.module.sigmoid(decoder.module.f_beta(h))  # gating scalar, (s, encoder_dim)
-        awe = gate * awe
-
-        h, c = decoder.module.decode_step(torch.cat([embeddings, awe], dim=1), (h, c))  # (s, decoder_dim)
+        h, c = decoder.module.decode_step(embeddings, (h, c), awe)  # (s, decoder_dim)
 
         scores = decoder.module.fc(h)  # (s, vocab_size)
         scores = F.log_softmax(scores, dim=1)
