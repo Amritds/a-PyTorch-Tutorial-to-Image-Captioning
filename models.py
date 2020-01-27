@@ -2,6 +2,7 @@ import torch
 from torch import nn
 import torchvision
 import torch.jit as jit
+from torch.nn import Parameter
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
