@@ -68,6 +68,7 @@ function embed(web)
 
   torch.save(opt.filenames, {raw_txt=raw_txt, fea_txt=fea_txt})
   return 'done.'
-    
+end
+
 get_embedding:dispatch_get(embed, "/", "/embed")
     
