@@ -26,9 +26,7 @@ class LSTMCell(jit.ScriptModule):
         self.bias_ca = Parameter(torch.randn(hidden_size))
 
     @jit.script_method
-    def forward(self, input, state, attention_weighted_encoding):
-        # type: (Tensor, Tuple[Tensor, Tensor]) -> Tuple[Tensor, Tuple[Tensor, Tensor]]
-        hx, cx = state
+    def forward(self, input, hx, cx, attention_weighted_encoding):
         gates = (torch.mm(input, self.weight_ih.t()) + self.bias_ih +
                  torch.mm(hx, self.weight_hh.t()) + self.bias_hh)
         ingate, forgetgate, cellgate, outgate = gates.chunk(4, 1)
@@ -278,7 +276,8 @@ class DecoderWithAttention(nn.Module):
                        
             h, c = self.decode_step(
                 embeddings[:batch_size_t, t, :],
-                (h[:batch_size_t], c[:batch_size_t]),
+                h[:batch_size_t],
+                c[:batch_size_t],
                 attention_weighted_encoding)  # (batch_size_t, decoder_dim)
             
             preds = self.fc(self.dropout(h))  # (batch_size_t, vocab_size)
