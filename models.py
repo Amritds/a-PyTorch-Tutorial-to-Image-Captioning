@@ -43,7 +43,7 @@ class LSTMCell(jit.ScriptModule):
         cy = (forgetgate * cx) + (ingate * cellgate)
         hy = outgate * torch.tanh(cy)
 
-        return hy, (hy, cy)
+        return (hy, cy)
 
 
 
