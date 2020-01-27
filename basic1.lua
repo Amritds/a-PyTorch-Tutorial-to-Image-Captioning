@@ -29,9 +29,10 @@ for k,v in pairs(dict) do
 end
 
 opt = {
-  filenames = '',
+  filenames = '/data2/adsue/caption_data/mini_batch_captions.t7',
   doc_length = 201,
-  net_txt = '',
+  net_txt = '/data2/adsue/pretrained/coco_gru18_bs64_cls0.5_ngf128_ndf128_a10_c512_80_net_T.t7',
+  queries = '/data2/adsue/caption_data/mini_batch_captions.txt'
 }
 
 for k,v in pairs(opt) do opt[k] = tonumber(os.getenv(k)) or os.getenv(k) or opt[k] end
@@ -43,15 +44,34 @@ if net_txt.protos ~=nil then net_txt = net_txt.protos.enc_doc end
 
 net_txt:evaluate()
 
+local opt = opt
+local net_txt = net_txt
+
+-- basic1.lua
+require"orbit"
+
+local orbit = require"orbit"
+
+-- declaration
+module("basic1", package.seeall, orbit.new)
+
 -- handler
-function embed(web)
+function index(web)
+  return render_index(web)
+end
+
+-- dispatch
+basic1:dispatch_get(index, "/", "/index")
+
+-- render
+function render_index(web)
   -- Extract all text features.
   local fea_txt = {}
   -- Decode text for sanity check.
   local raw_txt = {}
   local raw_img = {}
   
-  for query_str in web.GET do
+  for query_str in io.lines(opt.queries) do
     local txt = torch.zeros(1,opt.doc_length,#alphabet)
     for t = 1,opt.doc_length do
       local ch = query_str:sub(t,t)
@@ -67,8 +87,5 @@ function embed(web)
   end
 
   torch.save(opt.filenames, {raw_txt=raw_txt, fea_txt=fea_txt})
-  return 'done.'
+  return 'done'
 end
-
-get_embedding:dispatch_get(embed, "/", "/embed")
-    
