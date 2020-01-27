@@ -9,8 +9,12 @@ require 'cutorch'
 require 'cudnn'
 require 'lfs'
 require 'torch'
+require "orbit"
 
+local orbit = require("orbit");
 
+-- declaration
+module("get_embedding", package.seeall, orbit.new)
 
 torch.setdefaulttensortype('torch.FloatTensor')
 
@@ -27,7 +31,6 @@ end
 opt = {
   filenames = '',
   doc_length = 201,
-  queries = 'cub_queries.txt',
   net_txt = '',
 }
 
@@ -40,24 +43,31 @@ if net_txt.protos ~=nil then net_txt = net_txt.protos.enc_doc end
 
 net_txt:evaluate()
 
--- Extract all text features.
-local fea_txt = {}
--- Decode text for sanity check.
-local raw_txt = {}
-local raw_img = {}
-for query_str in io.lines(opt.queries) do
-  local txt = torch.zeros(1,opt.doc_length,#alphabet)
-  for t = 1,opt.doc_length do
-    local ch = query_str:sub(t,t)
-    local ix = dict[ch]
-    if ix ~= 0 and ix ~= nil then
-      txt[{1,t,ix}] = 1
+-- handler
+function embed(web)
+  -- Extract all text features.
+  local fea_txt = {}
+  -- Decode text for sanity check.
+  local raw_txt = {}
+  local raw_img = {}
+  
+  for query_str in web.GET do
+    local txt = torch.zeros(1,opt.doc_length,#alphabet)
+    for t = 1,opt.doc_length do
+      local ch = query_str:sub(t,t)
+      local ix = dict[ch]
+      if ix ~= 0 and ix ~= nil then
+        txt[{1,t,ix}] = 1
+      end
     end
+    raw_txt[#raw_txt+1] = query_str
+    txt = txt:cuda()
+
+    fea_txt[#fea_txt+1] = net_txt:forward(txt):clone()
   end
-  raw_txt[#raw_txt+1] = query_str
-  txt = txt:cuda()
 
-  fea_txt[#fea_txt+1] = net_txt:forward(txt):clone()
-end
-
-torch.save(opt.filenames, {raw_txt=raw_txt, fea_txt=fea_txt})
+  torch.save(opt.filenames, {raw_txt=raw_txt, fea_txt=fea_txt})
+  return 'done.'
+    
+get_embedding:dispatch_get(embed, "/", "/embed")
+    
