@@ -160,10 +160,10 @@ def training_epochs(encoder, decoder, encoder_optimizer, decoder_optimizer, trai
     if training_type == 'XE':
         for epoch in range(start_epoch, epochs_XE):
 
-            # Decay learning rate if there is no improvement for 8 consecutive epochs, and terminate training after 20
+            # Decay learning rate every 3 epochs, and terminate training after 20
             if epochs_since_improvement == 20:
                 break
-            if epochs_since_improvement > 0 and epochs_since_improvement % 8 == 0:
+            if epoch % 3 == 0 and epoch !=0:
                 adjust_learning_rate(decoder_optimizer, 0.8)
                 if fine_tune_encoder:
                     adjust_learning_rate(encoder_optimizer, 0.8)        
@@ -206,10 +206,10 @@ def training_epochs(encoder, decoder, encoder_optimizer, decoder_optimizer, trai
 
         for epoch in range(start_epoch, epochs_RL):
 
-            # Decay learning rate if there is no improvement for 8 consecutive epochs, and terminate training after 20
+            # Decay learning rate every 3 epochs, and terminate training after 20
             if epochs_since_improvement == 20:
                 break
-            if epochs_since_improvement > 0 and epochs_since_improvement % 8 == 0:
+            if epoch % 3 == 0 and epoch !=0 :
                 adjust_learning_rate(decoder_optimizer, 0.8)
                 if fine_tune_encoder:
                     adjust_learning_rate(encoder_optimizer, 0.8)
