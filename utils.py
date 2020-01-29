@@ -6,6 +6,7 @@ import h5py
 import json
 import torch
 import pickle
+import requests
 from torch.nn.modules.loss import _Loss
 from torch.nn import CosineSimilarity
 from scipy.misc import imread, imresize
@@ -367,8 +368,8 @@ def image_comparison_reward(imgs, hypothesis, ground_truth=None):
             f.write(sent + '\n')
 
     # Get encoding (saved as a torchfile)
-    os.system('bash ./encode_text.sh')
-
+    requests.get('http://0.0.0.0:8080/')
+    
     # Generate images from encoded minbatch (saved to file)
     recreated_imgs = image_generator()
     recreated_imgs = torch.Tensor(recreated_imgs).to(device).permute(0,3,1,2)
