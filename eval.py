@@ -8,6 +8,9 @@ from nltk.translate.bleu_score import corpus_bleu
 import torch.nn.functional as F
 from tqdm import tqdm
 
+import numpy as np
+from utils import image_comparison_reward
+
 # Parameters
 data_folder = '/data2/adsue/caption_data'  # folder with data files saved by create_input_files.py
 data_name = 'coco_5_cap_per_img_5_min_word_freq'  # base name shared by data files
@@ -58,7 +61,10 @@ def evaluate(beam_size):
     # references = [[ref1a, ref1b, ref1c], [ref2a, ref2b], ...], hypotheses = [hyp1, hyp2, ...]
     references = list()
     hypotheses = list()
-
+    
+    images_buffer = list()
+    regeneration_reward = list()
+        
     # For each image
     for i, (image, caps, caplens, allcaps) in enumerate(
             tqdm(loader, desc="EVALUATING AT BEAM SIZE " + str(beam_size))):
@@ -67,13 +73,19 @@ def evaluate(beam_size):
 
         references.append(img_captions)
         hypotheses.append(hyp)
-
+        
+        image_buffer.append(image)
+        
         assert len(references) == len(hypotheses)
 
+        if (i+1)%32 == 0:
+            regeneration_reward.append(image_comparison_reward(image_buffer, hypotheses[-32:]))
+            image_buffer = list()
+            
     # Calculate BLEU-4 scores
     bleu4 = corpus_bleu(references, hypotheses)
-
-    return bleu4
+    avg_regeneration_reward = np.mean(regeneration_reward)
+    return (bleu4, avg_regeneration_reward)
 
 
 def get_captions_and_hypothesis(image, caps, caplens, allcaps):
@@ -183,4 +195,6 @@ def get_captions_and_hypothesis(image, caps, caplens, allcaps):
 
 if __name__ == '__main__':
     beam_size = 1
-    print("\nBLEU-4 score @ beam size of %d is %.4f." % (beam_size, evaluate(beam_size)))
+    (bleu4, avg_regeneration_reward) = evaluate(beam_size)
+    print("\nBLEU-4 score @ beam size of %d is %.4f." % (beam_size, bleu4))
+    print("\nAverage Regeneration-Reward @ beam size of %d is %.4f." % (beam_size, avg_regeneration_reward))
