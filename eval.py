@@ -62,7 +62,7 @@ def evaluate(beam_size):
     references = list()
     hypotheses = list()
     
-    images_buffer = list()
+    image_buffer = list()
     regeneration_reward = list()
         
     # For each image
