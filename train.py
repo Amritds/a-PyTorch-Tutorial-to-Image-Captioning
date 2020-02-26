@@ -193,10 +193,8 @@ def training_epochs(encoder, decoder, encoder_optimizer, decoder_optimizer, trai
         #-------------------------------------------------------------------------------------------------
 
             # One epoch's validation
-            recent_bleu4 = validate_XE(val_loader=val_loader,
-                                       encoder=encoder,
-                                       decoder=decoder,
-                                       criterion=criterion)
+            recent_bleu4, _ = validate(encoder=encoder,
+                                       decoder=decoder)
 
             # Check if there was an improvement
             is_best = recent_bleu4 > best_bleu4
@@ -241,8 +239,7 @@ def training_epochs(encoder, decoder, encoder_optimizer, decoder_optimizer, trai
         #-------------------------------------------------------------------------------------------------
 
             # One epoch's validation (Computes average reward for the epoch)
-            recent_reward = validate_RL(val_loader=val_loader,
-                                        encoder=encoder,
+            _, recent_reward = validate(encoder=encoder,
                                         decoder=decoder,
                                         reward_function=reward_function)
 
@@ -445,123 +442,10 @@ def train_RL(train_loader, encoder, decoder, criterion, encoder_optimizer, decod
         gc.collect()
         
         
-def validate_XE(val_loader, encoder, decoder, criterion):
+
+def validate(val_loader, encoder, decoder, reward_function=BLEU_reward):
     """
-    Performs one epoch's validation.
-
-    :param val_loader: DataLoader for validation data.
-    :param encoder: encoder model
-    :param decoder: decoder model
-    :param criterion: loss layer
-    :return: BLEU-4 score
-    """
-    decoder.eval()  # eval mode (no dropout or batchnorm)
-    if encoder is not None:
-        encoder.eval()
-
-    batch_time = AverageMeter()
-    losses = AverageMeter()
-    top5accs = AverageMeter()
-
-    start = time.time()
-
-    references = list()  # references (true captions) for calculating BLEU-4 score
-    hypotheses = list()  # hypotheses (predictions)
-
-    # explicitly disable gradient calculation to avoid CUDA memory error
-    # solves the issue #57
-    with torch.no_grad():
-        # Batches
-        for i, (imgs, caps, caplens, allcaps) in enumerate(val_loader):
-
-            # Move to device, if available
-            imgs = imgs.to(device)
-            caps = caps.to(device)
-            caplens = caplens.to(device)
-
-            # Forward prop.
-            if encoder is not None:
-                imgs = encoder(imgs)
-            scores, caps_sorted, decode_lengths, alphas, sort_ind = decoder(imgs, caps, caplens)
-            
-            # Sort gathered results in decreasing order -- corrects for jumbling of using multiple GPUs
-            decode_lengths, decode_sort_ind = decode_lengths.sort(dim=0, descending=True)
-            decode_lengths = decode_lengths.tolist()
-            scores = scores[decode_sort_ind]
-            caps_sorted = caps_sorted[decode_sort_ind]
-            alphas = alphas[decode_sort_ind]
-            sort_ind = sort_ind[decode_sort_ind]
-            
-            # Since we decoded starting with <start>, the targets are all words after <start>, up to <end>
-            targets = caps_sorted[:, 1:]
-
-            # Remove timesteps that we didn't decode at, or are pads
-            # pack_padded_sequence is an easy trick to do this
-            scores_copy = scores.clone()
-            scores, _ = pack_padded_sequence(scores, decode_lengths, batch_first=True)
-            targets, _ = pack_padded_sequence(targets, decode_lengths, batch_first=True)
-
-            # Calculate loss
-            loss = criterion(scores, targets)
-
-            # Add doubly stochastic attention regularization
-            loss += alpha_c * ((1. - alphas.sum(dim=1)) ** 2).mean()
-
-            # Keep track of metrics
-            losses.update(loss.item(), sum(decode_lengths))
-            top5 = accuracy(scores, targets, 5)
-            top5accs.update(top5, sum(decode_lengths))
-            batch_time.update(time.time() - start)
-
-            start = time.time()
-
-            if i % print_freq == 0:
-                print('Validation: [{0}/{1}]\t'
-                      'Batch Time {batch_time.val:.3f} ({batch_time.avg:.3f})\t'
-                      'Loss {loss.val:.4f} ({loss.avg:.4f})\t'
-                      'Top-5 Accuracy {top5.val:.3f} ({top5.avg:.3f})\t'.format(i, len(val_loader), batch_time=batch_time,
-                                                                                loss=losses, top5=top5accs))
-
-            # Store references (true captions), and hypothesis (prediction) for each image
-            # If for n images, we have n hypotheses, and references a, b, c... for each image, we need -
-            # references = [[ref1a, ref1b, ref1c], [ref2a, ref2b], ...], hypotheses = [hyp1, hyp2, ...]
-
-            # References
-            allcaps = allcaps[sort_ind]  # because images were sorted in the decoder
-            for j in range(allcaps.shape[0]):
-                img_caps = allcaps[j].tolist()
-                img_captions = list(
-                    map(lambda c: [w for w in c if w not in {word_map['<start>'], word_map['<pad>']}],
-                        img_caps))  # remove <start> and pads
-                references.append(img_captions)
-
-            # Hypotheses
-            _, preds = torch.max(scores_copy, dim=2)
-            preds = preds.tolist()
-            temp_preds = list()
-            for j, p in enumerate(preds):
-                temp_preds.append(preds[j][:decode_lengths[j]])  # remove pads
-            preds = temp_preds
-            hypotheses.extend(preds)
-
-            assert len(references) == len(hypotheses)
-            
-            
-            
-        # Calculate BLEU-4 scores
-        bleu4 = corpus_bleu(references, hypotheses)
-
-        print(
-            '\n * LOSS - {loss.avg:.3f}, TOP-5 ACCURACY - {top5.avg:.3f}, BLEU-4 - {bleu}\n'.format(
-                loss=losses,
-                top5=top5accs,
-                bleu=bleu4))
-
-    return bleu4
-
-def validate_RL(val_loader, encoder, decoder, reward_function):
-    """
-    Performs one epoch's validation.
+    Performs one epoch's validation for bleu4 and related reward.
 
     """
     beam_size=1
@@ -569,16 +453,16 @@ def validate_RL(val_loader, encoder, decoder, reward_function):
     decoder.eval()
     encoder.eval()
     
-    (bleu4, avg_regeneration_reward) = evaluate(beam_size, encoder, decoder)
+    (bleu4, avg_regeneration_reward) = evaluate(beam_size, encoder, decoder, reward_function)
     with open(cfg['validation_folder'],'a') as f:
-        f.write('BLEU4: ' + str(bleu4)+'     RR:' + str(avg_recreation_reward)+'\n')
-    
+        f.write('BLEU4: ' + str(bleu4)+'     ' + reward_function.__name__ + ': ' + str(avg_recreation_reward)+'\n')
+   
     decoder.train()
     encoder.train()
     
     print('\nBLEU4: ' + str(bleu4)+'     RR:' + str(avg_recreation_reward)+'\n')
         
-    return avg_recreation_reward
+    return (bleu4, avg_recreation_reward)
 
 
 if __name__ == '__main__':

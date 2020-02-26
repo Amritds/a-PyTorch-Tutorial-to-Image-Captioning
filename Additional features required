@@ -6,3 +6,9 @@
 
 4. Add fixed seeds for reproducability in comparison.py
 5. Fix normalization bug.
+
+6. New reward signals to incorporate points for word preservation.
+
+7. Refactor and professionalism of code.
+
+8. Add CIDER and other metrics.

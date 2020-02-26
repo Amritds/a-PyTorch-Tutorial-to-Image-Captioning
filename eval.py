@@ -47,7 +47,7 @@ normalize = transforms.Normalize(mean=[0.485, 0.456, 0.406],
                                  std=[0.229, 0.224, 0.225])
 
 
-def evaluate(beam_size, encoder, decoder):
+def evaluate(beam_size, encoder, decoder, reward_function):
     """
     Evaluation
 
@@ -87,7 +87,7 @@ def evaluate(beam_size, encoder, decoder):
         if (i+1)%32 == 0:
             img_batch = torch.cat(image_buffer).to(device)
             blockPrint()
-            regeneration_reward.append(image_comparison_reward(img_batch, hypotheses[-32:]))
+            regeneration_reward.append(reward_function(img_batch, hypotheses[-32:]))
             enablePrint()
             image_buffer = list()
             
