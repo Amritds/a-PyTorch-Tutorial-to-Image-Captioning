@@ -171,7 +171,7 @@ def training_epochs(encoder, decoder, encoder_optimizer, decoder_optimizer, trai
     if training_type == 'XE':
         for epoch in range(start_epoch, epochs_XE):
 
-            # Decay learning rate if there is no improvement for 8 consecutive epochs, and terminate training after 20
+            # Decay learning rate after 3 consecutive epochs, and terminate training after 20 if no improvement is seen.
             if epochs_since_improvement == 20:
                 break
             if epoch % 3 == 0 and epoch !=0:
@@ -215,7 +215,7 @@ def training_epochs(encoder, decoder, encoder_optimizer, decoder_optimizer, trai
 
         for epoch in range(start_epoch, epochs_RL):
 
-            # Decay learning rate if there is no improvement for 8 consecutive epochs, and terminate training after 20
+            # Decay learning rate after 3 consecutive epochs, and terminate training after 20 if no improvement is seen.
             if epochs_since_improvement == 20:
                 break
             if epoch % 3 == 0 and epoch !=0:
@@ -445,7 +445,7 @@ def train_RL(train_loader, encoder, decoder, criterion, encoder_optimizer, decod
 
 def validate(val_loader, encoder, decoder, reward_function=BLEU_reward):
     """
-    Performs one epoch's validation for bleu4 and related reward.
+    Performs one epoch's validation for bleu4 and reward specified.
 
     """
     beam_size=1
@@ -454,6 +454,7 @@ def validate(val_loader, encoder, decoder, reward_function=BLEU_reward):
     encoder.eval()
     
     (bleu4, avg_regeneration_reward) = evaluate(beam_size, encoder, decoder, reward_function)
+    
     with open(cfg['validation_folder'],'a') as f:
         f.write('BLEU4: ' + str(bleu4)+'     ' + reward_function.__name__ + ': ' + str(avg_recreation_reward)+'\n')
    

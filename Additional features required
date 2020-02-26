@@ -1,14 +1,14 @@
 1. CFG file to specify exp parameters, and output directory.-- also directory for minibatch samples. 
 
-2. Correct validation step in RL training.---------------------------------------------------------------------------------------- done.
+2. Correct validation step in RL training.-----------------------------------------------------------------------DONE.
 
-3. Enable multiple gpu training through gpu specification.
+3. Enable multiple gpu training through gpu specification. ++++++++ FIX NOW
+4. Add fixed seeds for reproducability in all experiments. ++++++ FIX NOW
+5. Fix normalization bug. ---------------------------------------------------------------------------------------DONE.
 
-4. Add fixed seeds for reproducability in comparison.py
-5. Fix normalization bug.
+
 
 6. New reward signals to incorporate points for word preservation.
-
-7. Refactor and professionalism of code.
-
 8. Add CIDER and other metrics.
+7. Refactor and professionalism of code.
+8. Refactor and professionalism of exepriment directories.

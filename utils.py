@@ -18,6 +18,10 @@ import torchvision
 from nltk.translate.bleu_score import sentence_bleu
 from StackGAN.code.main_sampler import sample as image_generator
 
+import torchvision.transforms as transforms
+normalize = transforms.Normalize(mean=[0.485, 0.456, 0.406],
+                                 std=[0.229, 0.224, 0.225])
+
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")  # sets device for model and PyTorch tensors
 
 # Data parameters
@@ -370,21 +374,22 @@ def image_comparison_reward(imgs, hypothesis, ground_truth=None):
     # Get encoding (saved as a torchfile)
     requests.get('http://0.0.0.0:8080/')
     
-    # Generate images from encoded minbatch (saved to file)
-    recreated_imgs = image_generator()
+    # Generate images from encoded minbatch (saved to file), convert to tensor, scale and normalize.
+    recreated_imgs = (image_generator())
     recreated_imgs = torch.Tensor(recreated_imgs).to(device).permute(0,3,1,2)
-
+    recreated_imgs = normalize(recreated_imgs/torch.max(recreated_imgs))
+    
     # compute the encoding for recreated and original images
     encoded_original = comparison_encoder(imgs)
     encoded_recreation = comparison_encoder(recreated_imgs)
 
     # save images and recreated images.
-    minibatch_original_imgs_path = os.path.join(data_folder, 'minibatch_o_imgs.pkl')
-    minibatch_recreated_imgs_path = os.path.join(data_folder,'minibatch_r_imgs.pkl')
-    with open(minibatch_original_imgs_path,'wb') as f:
-        pickle.dump(imgs.permute(0,2,3,1).cpu().numpy(), f)
-    with open(minibatch_recreated_imgs_path, 'wb') as f:
-        pickle.dump(recreated_imgs.permute(0,2,3,1).cpu().numpy(), f)
+    #minibatch_original_imgs_path = os.path.join(data_folder, 'minibatch_o_imgs.pkl')
+    #minibatch_recreated_imgs_path = os.path.join(data_folder,'minibatch_r_imgs.pkl')
+    #with open(minibatch_original_imgs_path,'wb') as f:
+    #    pickle.dump(imgs.permute(0,2,3,1).cpu().numpy(), f)
+    #with open(minibatch_recreated_imgs_path, 'wb') as f:
+    #    pickle.dump(recreated_imgs.permute(0,2,3,1).cpu().numpy(), f)
     # compute similarity
     similarity = cos(encoded_original, encoded_recreation)
 
