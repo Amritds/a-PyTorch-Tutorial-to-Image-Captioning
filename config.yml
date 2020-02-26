@@ -1,0 +1,31 @@
+training_type: 'RL_recreation'
+
+data_folder: '/data2/adsue/caption_data'
+data_name: 'coco_5_cap_per_img_5_min_word_freq'
+
+emb_dim: 512
+attention_dim: 512
+decoder_dim: 512
+dropout: 0.5
+
+start_epoch: 0
+epochs_since_improvement: 0 
+batch_size: 32
+workers: 0  
+encoder_lr: 1e-6  
+decoder_lr: 4e-6  
+grad_clip: 5.  
+alpha_c: 1
+
+print_freq: 100
+
+fine_tune_encoder: False  
+checkpoint: '/data2/adsue/caption_data/checkpoints/RL_recreation_checkpoint_0_coco_5_cap_per_img_5_min_word_freq.pth.tar'
+
+epochs_XE: 0 
+
+epochs_RL: 40
+
+word_map_file: '/data2/adsue/caption_data/WORDMAP_coco_5_cap_per_img_5_min_word_freq.json'
+
+validation_folder: '/data2/adsue/caption_data/validate_lr-6'

@@ -1,3 +1,4 @@
+import sys
 import torch.backends.cudnn as cudnn
 import torch
 import torch.optim
@@ -8,16 +9,20 @@ from utils import *
 from nltk.translate.bleu_score import corpus_bleu
 import torch.nn.functional as F
 from tqdm import tqdm
+import yaml
+
+with open(sys.argv[1], 'r') as ymlfile:
+    cfg = yaml.load(ymlfile)
 
 import numpy as np
 from utils import image_comparison_reward, blockPrint, enablePrint
 
 # Parameters
-data_folder = '/data2/adsue/caption_data'  # folder with data files saved by create_input_files.py
-data_name = 'coco_5_cap_per_img_5_min_word_freq'  # base name shared by data files
+data_folder = cfg['data_folder']  # folder with data files saved by create_input_files.py
+data_name = cfg['data_name']  # base name shared by data files
 
-checkpoint = '/data2/adsue/caption_data/checkpoints/RL_recreation_checkpoint_2_coco_5_cap_per_img_5_min_word_freq.pth.tar'  # model checkpoint
-word_map_file = '/data2/adsue/caption_data/WORDMAP_coco_5_cap_per_img_5_min_word_freq.json'  # word map, ensure it's the same the data was encoded with and the model was trained with
+checkpoint = cfg['checkpoint']  # model checkpoint
+word_map_file = cfg['word_map_file']  # word map, ensure it's the same the data was encoded with and the model was trained with
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")  # sets device for model and PyTorch tensors
 cudnn.benchmark = True  # set to true only if inputs to model are fixed size; otherwise lot of computational overhead
@@ -42,7 +47,7 @@ normalize = transforms.Normalize(mean=[0.485, 0.456, 0.406],
                                  std=[0.229, 0.224, 0.225])
 
 
-def evaluate(beam_size):
+def evaluate(beam_size, encoder, decoder):
     """
     Evaluation
 
@@ -70,7 +75,7 @@ def evaluate(beam_size):
     for i, (image, caps, caplens, allcaps) in enumerate(
             tqdm(loader, desc="EVALUATING AT BEAM SIZE " + str(beam_size))):
 
-        (img_captions, hyp) = get_captions_and_hypothesis(image, caps, caplens, allcaps)
+        (img_captions, hyp) = get_captions_and_hypothesis(image, caps, caplens, allcaps, encoder, decoder)
 
         references.append(img_captions)
         hypotheses.append(hyp)
@@ -92,7 +97,7 @@ def evaluate(beam_size):
     return (bleu4, avg_regeneration_reward)
 
 
-def get_captions_and_hypothesis(image, caps, caplens, allcaps):
+def get_captions_and_hypothesis(image, caps, caplens, allcaps, encoder, decoder):
     k = beam_size
 
     # Move to GPU device, if available
@@ -199,7 +204,7 @@ def get_captions_and_hypothesis(image, caps, caplens, allcaps):
 
 if __name__ == '__main__':
     beam_size = 1
-    (bleu4, avg_regeneration_reward) = evaluate(beam_size)
+    (bleu4, avg_regeneration_reward) = evaluate(beam_size, encoder, decoder)
     print("\nBLEU-4 score @ beam size of %d is %.4f." % (beam_size, bleu4))
     print("\nAverage Regeneration-Reward @ beam size of %d is %.4f." % (beam_size, avg_regeneration_reward))
 

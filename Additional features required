@@ -1,0 +1,8 @@
+1. CFG file to specify exp parameters, and output directory.-- also directory for minibatch samples. 
+
+2. Correct validation step in RL training.---------------------------------------------------------------------------------------- done.
+
+3. Enable multiple gpu training through gpu specification.
+
+4. Add fixed seeds for reproducability in comparison.py
+5. Fix normalization bug.

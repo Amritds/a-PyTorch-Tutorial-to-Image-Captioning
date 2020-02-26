@@ -8,36 +8,41 @@ from torch import nn
 from torch.nn.utils.rnn import pack_padded_sequence
 from models import Encoder, DecoderWithAttention
 from step_wise_decoding import get_hypothesis_greedy
+from eval import evaluate
 from datasets import *
 from utils import *
 from nltk.translate.bleu_score import corpus_bleu
 import gc
+import yaml
+
+with open(sys.argv[1], 'r') as ymlfile:
+    cfg = yaml.load(ymlfile)
 
 # Data parameters
-data_folder = '/data2/adsue/caption_data'  # folder with data files saved by create_input_files.py
-data_name = 'coco_5_cap_per_img_5_min_word_freq'  # base name shared by data files
+data_folder = cfg['data_folder']  # folder with data files saved by create_input_files.py
+data_name = cfg['data_name']  # base name shared by data files
 
 # Model parameters
-emb_dim = 512  # dimension of word embeddings
-attention_dim = 512  # dimension of attention linear layers
-decoder_dim = 512  # dimension of decoder RNN
-dropout = 0.5
+emb_dim = cfg['emb_dim'] # dimension of word embeddings
+attention_dim = cfg['attention_dim']  # dimension of attention linear layers
+decoder_dim = cfg['decoder_dim']  # dimension of decoder RNN
+dropout = cfg['dropout']
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")  # sets device for model and PyTorch tensors
 cudnn.benchmark = True  # set to true only if inputs to model are fixed size; otherwise lot of computational overhead
 
 print('Device type: ', device)
 
 # Training parameters (General)
-start_epoch = 0
-epochs_since_improvement = 0  # keeps track of number of epochs since there's been an improvement in validation BLEU
-batch_size = 32
-workers = 0  # for data-loading; right now, only 1 works with h5py
-encoder_lr = 1e-6  # learning rate for encoder if fine-tuning
-decoder_lr = 4e-6  # learning rate for decoder
-grad_clip = 5.  # clip gradients at an absolute value of
-alpha_c = 1.  # regularization parameter for 'doubly stochastic attention', as in the paper
+start_epoch = cfg['start_epoch']
+epochs_since_improvement = cfg['epochs_since_improvement']  # keeps track of number of epochs since there's been an improvement in validation BLEU
+batch_size = cfg['batch_size']
+workers = cfg['workers']  # for data-loading; right now, only 1 works with h5py
+encoder_lr = cfg['encoder_lr']  # learning rate for encoder if fine-tuning
+decoder_lr = cfg['decoder_lr']  # learning rate for decoder
+grad_clip = cfg['grad_clip']  # clip gradients at an absolute value of
+alpha_c = cfg['alpha_c']  # regularization parameter for 'doubly stochastic attention', as in the paper
 
-desired_training_type = sys.argv[1]
+desired_training_type = cfg['training_type']
 training_type = desired_training_type
 
 reward_map ={'RL_recreation' : image_comparison_reward,
@@ -46,15 +51,15 @@ reward_map ={'RL_recreation' : image_comparison_reward,
 best_bleu4 = 0.  # BLEU-4 score right now
 best_reward = 0. # Avg Reward right now
 
-print_freq = 100  # print training/validation stats every __ batches
-fine_tune_encoder = False  # fine-tune encoder?
-checkpoint = '/data2/adsue/caption_data/checkpoints/RL_recreation_checkpoint_0_coco_5_cap_per_img_5_min_word_freq.pth.tar'  # path to checkpoint, None if none
+print_freq = cfg['print_freq'] # print training/validation stats every __ batches
+fine_tune_encoder = cfg['fine_tune_encoder']  # fine-tune encoder?
+checkpoint = cfg['checkpoint'] # path to checkpoint, None if none
 
 # Training parameters (Cross Entropy Maximization)
-epochs_XE = 0  # number of epochs to train for (if early stopping is not triggered)
+epochs_XE = cfg['epochs_XE']  # number of epochs to train for (if early stopping is not triggered)
 
 # Training parameters (Expected Reward Maximization)
-epochs_RL = 40  # number of epochs to train for (if early stopping is not triggered)
+epochs_RL = cfg['epochs_RL']  # number of epochs to train for (if early stopping is not triggered)
 
 
 def main():
@@ -558,71 +563,22 @@ def validate_RL(val_loader, encoder, decoder, reward_function):
     """
     Performs one epoch's validation.
 
-    :param val_loader: DataLoader for validation data.
-    :param encoder: encoder model
-    :param decoder: decoder model
-    :param criterion: loss layer
-    :return: BLEU-4 score
     """
-    decoder.eval()  # eval mode (no dropout or batchnorm)
-    if encoder is not None:
-        encoder.eval()
-
-    batch_time = AverageMeter()
+    beam_size=1
     
-    start = time.time()
-
-    references = list()  # references (true captions) for calculating BLEU-4 score
-    hypotheses = list()  # hypotheses (predictions)
-
-    counter = 0
-    sum_avg_rewards = 0
+    decoder.eval()
+    encoder.eval()
     
-    # explicitly disable gradient calculation to avoid CUDA memory error
-    # solves the issue #57
-    with torch.no_grad():
-        # Batches
-        for i, (imgs, caps, caplens, allcaps) in enumerate(val_loader):
-            
-            # Move to device, if available
-            imgs = imgs.to(device)
-            caps = caps.to(device)
-            caplens = caplens.to(device)
-
-            encoder_out = encoder(imgs)
+    (bleu4, avg_regeneration_reward) = evaluate(beam_size, encoder, decoder)
+    with open(cfg['validation_folder'],'a') as f:
+        f.write('BLEU4: ' + str(bleu4)+'     RR:' + str(avg_recreation_reward)+'\n')
+    
+    decoder.train()
+    encoder.train()
+    
+    print('\nBLEU4: ' + str(bleu4)+'     RR:' + str(avg_recreation_reward)+'\n')
         
-            # Notice, we are not sampling here! We are using greedy decoding.
-            (hypotheses, sum_top_scores) = get_hypothesis_greedy(encoder_out, decoder, sample=False)
-     
-            batch_time.update(time.time() - start)
-
-            batch_avg_reward = reward_function(imgs, hypotheses, caps).mean()
-            sum_avg_rewards += batch_avg_reward
-            counter +=1
-
-            start = time.time()
-
-            if i % print_freq == 0:
-                print('Validation: [{0}/{1}]\t'
-                      'Batch Time {batch_time.val:.3f} ({batch_time.avg:.3f})\t'
-                      'Minibatch Average Reward:'.format(i, len(val_loader), batch_time=batch_time, batch_avg_reward=batch_avg_reward))
-
-            # Free memory
-            del sum_top_scores
-            del hypotheses
-            gc.collect()
-            
-            
-            
-        avg_reward = sum_avg_rewards/counter
-
-        print(
-            '\n * Epoch Average Reward- {avg_reward:.3f}\n'.format(
-                avg_reward=avg_reward))
-
-        
-        
-    return avg_reward.item()
+    return avg_recreation_reward
 
 
 if __name__ == '__main__':
