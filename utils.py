@@ -368,8 +368,8 @@ def image_comparison_reward(imgs, hypothesis, ground_truth=None):
             f.write(sent + '\n')
 
     # Get encoding (saved as a torchfile)
-    requests.get('http://10.24.6.71:8080/')
-
+    requests.get('http://0.0.0.0:8080/')
+    
     # Generate images from encoded minbatch (saved to file)
     recreated_imgs = image_generator()
     recreated_imgs = torch.Tensor(recreated_imgs).to(device).permute(0,3,1,2)
@@ -378,6 +378,13 @@ def image_comparison_reward(imgs, hypothesis, ground_truth=None):
     encoded_original = comparison_encoder(imgs)
     encoded_recreation = comparison_encoder(recreated_imgs)
 
+    # save images and recreated images.
+    minibatch_original_imgs_path = os.path.join(data_folder, 'minibatch_o_imgs.pkl')
+    minibatch_recreated_imgs_path = os.path.join(data_folder,'minibatch_r_imgs.pkl')
+    with open(minibatch_original_imgs_path,'wb') as f:
+        pickle.dump(imgs.permute(0,2,3,1).cpu().numpy(), f)
+    with open(minibatch_recreated_imgs_path, 'wb') as f:
+        pickle.dump(recreated_imgs.permute(0,2,3,1).cpu().numpy(), f)
     # compute similarity
     similarity = cos(encoded_original, encoded_recreation)
 

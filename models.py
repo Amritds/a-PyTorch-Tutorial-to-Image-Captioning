@@ -1,47 +1,8 @@
 import torch
 from torch import nn
 import torchvision
-import torch.jit as jit
-from torch.nn import Parameter
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-
-
-
-class LSTMCell(nn.Module):
-    """
-    Custom LSTM with attention fed only to the cell state
-    (LSTMCell template taken from: https://github.com/pytorch/pytorch/blob/master/benchmarks/fastrnns/custom_lstms.py)
-    """
-    def __init__(self, input_size, hidden_size, attention_weighted_encoding_size):
-        super(LSTMCell, self).__init__()
-        self.input_size = input_size
-        self.hidden_size = hidden_size
-        self.weight_ih = Parameter(torch.randn(4 * hidden_size, input_size))
-        self.weight_hh = Parameter(torch.randn(4 * hidden_size, hidden_size))
-        self.bias_ih = Parameter(torch.randn(4 * hidden_size))
-        self.bias_hh = Parameter(torch.randn(4 * hidden_size))
-        
-        self.weight_ca = Parameter(torch.randn(hidden_size, attention_weighted_encoding_size))
-        self.bias_ca = Parameter(torch.randn(hidden_size))
-
-    def forward(self, input, hx, cx, attention_weighted_encoding):
-        gates = (torch.mm(input, self.weight_ih.t()) + self.bias_ih +
-                 torch.mm(hx, self.weight_hh.t()) + self.bias_hh)
-        ingate, forgetgate, cellgate, outgate = gates.chunk(4, 1)
-
-        ingate = torch.sigmoid(ingate)
-        forgetgate = torch.sigmoid(forgetgate)
-        
-        cellgate = torch.tanh(cellgate + torch.mm(attention_weighted_encoding, self.weight_ca.t()) + self.bias_ca)
-        
-        outgate = torch.sigmoid(outgate)
-
-        cy = (forgetgate * cx) + (ingate * cellgate)
-        hy = outgate * torch.tanh(cy)
-
-        return (hy, cy)
-
 
 
 class Encoder(nn.Module):
@@ -182,10 +143,10 @@ class DecoderWithAttention(nn.Module):
 
         self.embedding = nn.Embedding(vocab_size, embed_dim)  # embedding layer
         self.dropout = nn.Dropout(p=self.dropout)
-        self.decode_step = LSTMCell(embed_dim , decoder_dim, encoder_dim)  # decoding LSTMCell
+        self.decode_step = nn.LSTMCell(embed_dim + encoder_dim, decoder_dim, bias=True)  # decoding LSTMCell
         self.init_h = nn.Linear(encoder_dim, decoder_dim)  # linear layer to find initial hidden state of LSTMCell
         self.init_c = nn.Linear(encoder_dim, decoder_dim)  # linear layer to find initial cell state of LSTMCell
-        
+        self.f_beta = nn.Linear(decoder_dim, encoder_dim)  # linear layer to create a sigmoid-activated gate
         self.sigmoid = nn.Sigmoid()
         self.fc = nn.Linear(decoder_dim, vocab_size)  # linear layer to find scores over vocabulary
         self.init_weights()  # initialize some layers with the uniform distribution
@@ -272,13 +233,11 @@ class DecoderWithAttention(nn.Module):
             batch_size_t = sum([l > t for l in decode_lengths])
             attention_weighted_encoding, alpha = self.attention(encoder_out[:batch_size_t],
                                                                 h[:batch_size_t])
-                       
+            gate = self.sigmoid(self.f_beta(h[:batch_size_t]))  # gating scalar, (batch_size_t, encoder_dim)
+            attention_weighted_encoding = gate * attention_weighted_encoding
             h, c = self.decode_step(
-                embeddings[:batch_size_t, t, :],
-                h[:batch_size_t],
-                c[:batch_size_t],
-                attention_weighted_encoding)  # (batch_size_t, decoder_dim)
-            
+                torch.cat([embeddings[:batch_size_t, t, :], attention_weighted_encoding], dim=1),
+                (h[:batch_size_t], c[:batch_size_t]))  # (batch_size_t, decoder_dim)
             preds = self.fc(self.dropout(h))  # (batch_size_t, vocab_size)
             predictions[:batch_size_t, t, :] = preds
             alphas[:batch_size_t, t, :] = alpha

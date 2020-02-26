@@ -1,4 +1,5 @@
 import torch.backends.cudnn as cudnn
+import torch
 import torch.optim
 import torch.utils.data
 import torchvision.transforms as transforms
@@ -8,11 +9,14 @@ from nltk.translate.bleu_score import corpus_bleu
 import torch.nn.functional as F
 from tqdm import tqdm
 
+import numpy as np
+from utils import image_comparison_reward, blockPrint, enablePrint
+
 # Parameters
 data_folder = '/data2/adsue/caption_data'  # folder with data files saved by create_input_files.py
 data_name = 'coco_5_cap_per_img_5_min_word_freq'  # base name shared by data files
 
-checkpoint = '/data2/adsue/caption_data/checkpoints/BEST_XE_checkpoint_7_coco_5_cap_per_img_5_min_word_freq.pth.tar'  # model checkpoint
+checkpoint = '/data2/adsue/caption_data/checkpoints/RL_recreation_checkpoint_2_coco_5_cap_per_img_5_min_word_freq.pth.tar'  # model checkpoint
 word_map_file = '/data2/adsue/caption_data/WORDMAP_coco_5_cap_per_img_5_min_word_freq.json'  # word map, ensure it's the same the data was encoded with and the model was trained with
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")  # sets device for model and PyTorch tensors
@@ -47,7 +51,7 @@ def evaluate(beam_size):
     """
     # DataLoader
     loader = torch.utils.data.DataLoader(
-        CaptionDataset(data_folder, data_name, 'TEST', transform=transforms.Compose([normalize])),
+        CaptionDataset(data_folder, data_name, 'VAL', transform=transforms.Compose([normalize])),
         batch_size=1, shuffle=True, num_workers=1, pin_memory=True)
 
     # TODO: Batched Beam Search
@@ -58,7 +62,10 @@ def evaluate(beam_size):
     # references = [[ref1a, ref1b, ref1c], [ref2a, ref2b], ...], hypotheses = [hyp1, hyp2, ...]
     references = list()
     hypotheses = list()
-
+    
+    image_buffer = list()
+    regeneration_reward = list()
+        
     # For each image
     for i, (image, caps, caplens, allcaps) in enumerate(
             tqdm(loader, desc="EVALUATING AT BEAM SIZE " + str(beam_size))):
@@ -67,13 +74,22 @@ def evaluate(beam_size):
 
         references.append(img_captions)
         hypotheses.append(hyp)
-
+        
+        image_buffer.append(image)
+        
         assert len(references) == len(hypotheses)
 
+        if (i+1)%32 == 0:
+            img_batch = torch.cat(image_buffer).to(device)
+            blockPrint()
+            regeneration_reward.append(image_comparison_reward(img_batch, hypotheses[-32:]))
+            enablePrint()
+            image_buffer = list()
+            
     # Calculate BLEU-4 scores
     bleu4 = corpus_bleu(references, hypotheses)
-
-    return bleu4
+    avg_regeneration_reward = torch.cat(regeneration_reward).mean()
+    return (bleu4, avg_regeneration_reward)
 
 
 def get_captions_and_hypothesis(image, caps, caplens, allcaps):
@@ -108,18 +124,21 @@ def get_captions_and_hypothesis(image, caps, caplens, allcaps):
 
     # Start decoding
     step = 1
-    h, c = decoder.module.init_hidden_state(encoder_out)
+    h, c = decoder.init_hidden_state(encoder_out)
 
     # s is a number less than or equal to k, because sequences are removed from this process once they hit <end>
     while True:
 
-        embeddings = decoder.module.embedding(k_prev_words).squeeze(1)  # (s, embed_dim)
+        embeddings = decoder.embedding(k_prev_words).squeeze(1)  # (s, embed_dim)
 
-        awe, _ = decoder.module.attention(encoder_out, h)  # (s, encoder_dim), (s, num_pixels)
+        awe, _ = decoder.attention(encoder_out, h)  # (s, encoder_dim), (s, num_pixels)
 
-        h, c = decoder.module.decode_step(embeddings, h, c, awe)  # (s, decoder_dim)
+        gate = decoder.sigmoid(decoder.f_beta(h))  # gating scalar, (s, encoder_dim)
+        awe = gate * awe
 
-        scores = decoder.module.fc(h)  # (s, vocab_size)
+        h, c = decoder.decode_step(torch.cat([embeddings, awe], dim=1), (h, c))  # (s, decoder_dim)
+
+        scores = decoder.fc(h)  # (s, vocab_size)
         scores = F.log_softmax(scores, dim=1)
 
         # Add
@@ -180,4 +199,7 @@ def get_captions_and_hypothesis(image, caps, caplens, allcaps):
 
 if __name__ == '__main__':
     beam_size = 1
-    print("\nBLEU-4 score @ beam size of %d is %.4f." % (beam_size, evaluate(beam_size)))
+    (bleu4, avg_regeneration_reward) = evaluate(beam_size)
+    print("\nBLEU-4 score @ beam size of %d is %.4f." % (beam_size, bleu4))
+    print("\nAverage Regeneration-Reward @ beam size of %d is %.4f." % (beam_size, avg_regeneration_reward))
+

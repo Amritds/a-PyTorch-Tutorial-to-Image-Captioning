@@ -30,10 +30,10 @@ print('Device type: ', device)
 # Training parameters (General)
 start_epoch = 0
 epochs_since_improvement = 0  # keeps track of number of epochs since there's been an improvement in validation BLEU
-batch_size = 1
+batch_size = 32
 workers = 0  # for data-loading; right now, only 1 works with h5py
-encoder_lr = 1e-5  # learning rate for encoder if fine-tuning
-decoder_lr = 4e-5  # learning rate for decoder
+encoder_lr = 1e-6  # learning rate for encoder if fine-tuning
+decoder_lr = 4e-6  # learning rate for decoder
 grad_clip = 5.  # clip gradients at an absolute value of
 alpha_c = 1.  # regularization parameter for 'doubly stochastic attention', as in the paper
 
@@ -48,7 +48,7 @@ best_reward = 0. # Avg Reward right now
 
 print_freq = 100  # print training/validation stats every __ batches
 fine_tune_encoder = False  # fine-tune encoder?
-checkpoint = '/data2/adsue/caption_data/checkpoints/BEST_XE_checkpoint_7_coco_5_cap_per_img_5_min_word_freq.pth.tar'  # path to checkpoint, None if none
+checkpoint = '/data2/adsue/caption_data/checkpoints/RL_recreation_checkpoint_0_coco_5_cap_per_img_5_min_word_freq.pth.tar'  # path to checkpoint, None if none
 
 # Training parameters (Cross Entropy Maximization)
 epochs_XE = 0  # number of epochs to train for (if early stopping is not triggered)
@@ -118,7 +118,7 @@ def main():
             decoder = decoder.module
             encoder = encoder.module
             best_reward=0.
-            
+
             # Reset optimizers
             decoder_optimizer = torch.optim.Adam(params=filter(lambda p: p.requires_grad, decoder.parameters()),
                                              lr=decoder_lr)
@@ -166,7 +166,7 @@ def training_epochs(encoder, decoder, encoder_optimizer, decoder_optimizer, trai
     if training_type == 'XE':
         for epoch in range(start_epoch, epochs_XE):
 
-            # Decay learning rate every 3 epochs, and terminate training after 20
+            # Decay learning rate if there is no improvement for 8 consecutive epochs, and terminate training after 20
             if epochs_since_improvement == 20:
                 break
             if epoch % 3 == 0 and epoch !=0:
@@ -212,10 +212,10 @@ def training_epochs(encoder, decoder, encoder_optimizer, decoder_optimizer, trai
 
         for epoch in range(start_epoch, epochs_RL):
 
-            # Decay learning rate every 3 epochs, and terminate training after 20
+            # Decay learning rate if there is no improvement for 8 consecutive epochs, and terminate training after 20
             if epochs_since_improvement == 20:
                 break
-            if epoch % 3 == 0 and epoch !=0 :
+            if epoch % 3 == 0 and epoch !=0:
                 adjust_learning_rate(decoder_optimizer, 0.8)
                 if fine_tune_encoder:
                     adjust_learning_rate(encoder_optimizer, 0.8)
@@ -367,7 +367,7 @@ def train_RL(train_loader, encoder, decoder, criterion, encoder_optimizer, decod
     :param decoder_optimizer: optimizer to update decoder's weights
     :param epoch: epoch number
     """
-
+    
     decoder.eval()  # evaluation mode (dropout and batchnorm is not used)
     encoder.eval()
 
@@ -380,6 +380,7 @@ def train_RL(train_loader, encoder, decoder, criterion, encoder_optimizer, decod
 
     # Batches
     for i, (imgs, caps, caplens) in enumerate(train_loader):
+    
         data_time.update(time.time() - start)
 
         # Move to GPU, if available
@@ -576,13 +577,13 @@ def validate_RL(val_loader, encoder, decoder, reward_function):
 
     counter = 0
     sum_avg_rewards = 0
-
+    
     # explicitly disable gradient calculation to avoid CUDA memory error
     # solves the issue #57
     with torch.no_grad():
         # Batches
         for i, (imgs, caps, caplens, allcaps) in enumerate(val_loader):
-
+            
             # Move to device, if available
             imgs = imgs.to(device)
             caps = caps.to(device)

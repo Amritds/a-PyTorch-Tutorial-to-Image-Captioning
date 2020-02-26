@@ -54,7 +54,10 @@ def get_hypothesis_greedy(encoder_out, decoder, sample=False):
 
         awe, _ = decoder.attention(encoder_out[incomplete_inds], H[incomplete_inds])  # (batch_size, encoder_dim), (batch_size, num_pixels)
 
-        H[incomplete_inds], C[incomplete_inds] = decoder.decode_step(embeddings, H[incomplete_inds], C[incomplete_inds], awe)  # (batch_size, decoder_dim)
+        gate = decoder.sigmoid(decoder.f_beta(H[incomplete_inds]))  # gating scalar, (batch_size, encoder_dim)
+        awe = gate * awe
+
+        H[incomplete_inds], C[incomplete_inds] = decoder.decode_step(torch.cat([embeddings, awe], dim=1), (H[incomplete_inds], C[incomplete_inds]))  # (batch_size, decoder_dim)
 
         scores = decoder.fc(H[incomplete_inds])  # (batch_size, vocab_size)
         scores = F.log_softmax(scores, dim=1) #(batch_size, vocab_size) 
