@@ -3,12 +3,15 @@
 5. Fix normalization bug. ---------------------------------------------------------------------------------------DONE.
 
 ---------- Add break statements and verify correct behaviour. ---DONE
------------ Check if multiple gpu training works directly.
+----------- Check if multiple gpu training works directly. ---DONE (Dosen't work.)
 
-3. Enable multiple gpu training through gpu specification. ++++++++ FIX NOW
-4. Add fixed seeds for reproducability in all experiments. ++++++ FIX NOW
 
+3. Enable multiple gpu training through gpu specification. --- DONE
+
+8. Refactor and professionalism of exepriment directories and dedicate gpus.--- DONE
+
+9. Move checkpoints to local machine to clean data2
+4. Add fixed seeds for reproducability in comparison experiments. ++++++ FIX NOW
 6. New reward signals to incorporate points for word preservation.
 8. Add CIDER and other metrics.
 7. Refactor and professionalism of code.
-8. Refactor and professionalism of exepriment directories.

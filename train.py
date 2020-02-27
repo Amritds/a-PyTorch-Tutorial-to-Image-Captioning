@@ -64,12 +64,7 @@ epochs_XE = cfg['epochs_XE']  # number of epochs to train for (if early stopping
 # Training parameters (Expected Reward Maximization)
 epochs_RL = cfg['epochs_RL']  # number of epochs to train for (if early stopping is not triggered)
 
-# Unique directory (defied by key) to store exp outputs
-key = cfg['training_type'] + '_lr_'+str(cfg['decoder_lr']) + '_batch_'+ str(cfg['batch_size']) 
-
-exp_dir = os.path.join(data_folder, key)
-if not os.path.exists(exp_dir):
-    os.makedirs(exp_dir)
+exp_dir = sys.argv[2]
     
 # ------------------------------------ Training and validation code ---------------------------------------------------------------
 def main():
@@ -450,7 +445,7 @@ def train_RL(train_loader, encoder, decoder, criterion, encoder_optimizer, decod
         del hypotheses
         del hyp_max
         gc.collect()
-                
+        
 
 def validate(encoder, decoder, reward_function=BLEU_reward):
     """

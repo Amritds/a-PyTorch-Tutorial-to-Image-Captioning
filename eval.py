@@ -93,7 +93,7 @@ def evaluate(beam_size, encoder, decoder, reward_function):
             
     # Calculate BLEU-4 scores
     bleu4 = corpus_bleu(references, hypotheses)
-    avg_regeneration_reward = torch.cat(regeneration_reward).mean()
+    avg_regeneration_reward = torch.cat(regeneration_reward).mean().item()
     return (bleu4, avg_regeneration_reward)
 
 

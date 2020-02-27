@@ -31,13 +31,7 @@ device = torch.device("cuda" if torch.cuda.is_available() else "cpu")  # sets de
 data_folder = cfg['data_folder']  # folder with data files saved by create_input_files.py
 data_name = cfg['data_name'] # base name shared by data files
 
-
-# Unique directory (defied by key) to store exp outputs
-key = cfg['training_type'] + '_lr_'+str(cfg['decoder_lr']) + '_batch_'+ str(cfg['batch_size']) 
-
-exp_dir = os.path.join(data_folder, key)
-if not os.path.exists(exp_dir):
-    os.makedirs(exp_dir)
+exp_dir = sys.argv[2]
 
 checkpoints_dir = os.path.join(exp_dir,'checkpoints')
 if not os.path.exists(checkpoints_dir):
@@ -384,7 +378,7 @@ def image_comparison_reward(imgs, hypothesis, ground_truth=None):
             f.write(sent + '\n')
 
     # Get encoding (saved as a torchfile)
-    requests.get('http://0.0.0.0:8080/' + '?key='+key)
+    requests.get('http://0.0.0.0:8080/' + '?path='+exp_dir)
     
     # Generate images from encoded minbatch (saved to file), convert to tensor, scale and normalize.
     recreated_imgs = (image_generator(exp_dir))

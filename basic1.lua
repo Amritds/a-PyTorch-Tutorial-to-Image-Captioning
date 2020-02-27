@@ -58,9 +58,9 @@ module("basic1", package.seeall, orbit.new)
 
 -- handler
 function index(web)
-  path = web.GET['key']
-  filenames = string.format('/data2/adsue/caption_data/%s/mini_batch_captions.t7', path)
-  queries = string.format('/data2/adsue/caption_data/%s/mini_batch_captions.txt', path)
+  path = web.GET['path']
+  filenames = string.format('%s/mini_batch_captions.t7', path)
+  queries = string.format('%s/mini_batch_captions.txt', path)
     
   return render_index(web, filenames, queries)
 end
