@@ -46,8 +46,8 @@ start_epoch = cfg['start_epoch']
 epochs_since_improvement = cfg['epochs_since_improvement']  # keeps track of number of epochs since there's been an improvement in validation BLEU
 batch_size = cfg['batch_size']
 workers = cfg['workers']  # for data-loading; right now, only 1 works with h5py
-encoder_lr = cfg['encoder_lr']  # learning rate for encoder if fine-tuning
-decoder_lr = cfg['decoder_lr']  # learning rate for decoder
+encoder_lr = float(cfg['encoder_lr'])  # learning rate for encoder if fine-tuning
+decoder_lr = float(cfg['decoder_lr'])  # learning rate for decoder
 grad_clip = cfg['grad_clip']  # clip gradients at an absolute value of
 alpha_c = cfg['alpha_c']  # regularization parameter for 'doubly stochastic attention', as in the paper
 
