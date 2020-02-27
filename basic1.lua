@@ -56,22 +56,25 @@ local orbit = require"orbit"
 module("basic1", package.seeall, orbit.new)
 
 -- handler
-function index(web)
-  return render_index(web)
+function index(web, params)
+  filenames = string.format('%s/mini_batch_captions.t7', params.splat[1])
+  queries = string.format('%s/mini_batch_captions.txt', params.splat[1])
+    
+  return render_index(web, filenames, queries)
 end
 
 -- dispatch
-basic1:dispatch_get(index, "/", "/index")
+basic1:dispatch_get(index, R'/hi/*')
 
 -- render
-function render_index(web)
+function render_index(web, filenames, queries)
   -- Extract all text features.
   local fea_txt = {}
   -- Decode text for sanity check.
   local raw_txt = {}
   local raw_img = {}
   
-  for query_str in io.lines(opt.queries) do
+  for query_str in io.lines(queries) do
     local txt = torch.zeros(1,opt.doc_length,#alphabet)
     for t = 1,opt.doc_length do
       local ch = query_str:sub(t,t)
@@ -86,6 +89,6 @@ function render_index(web)
     fea_txt[#fea_txt+1] = net_txt:forward(txt):clone()
   end
 
-  torch.save(opt.filenames, {raw_txt=raw_txt, fea_txt=fea_txt})
+  torch.save(filenames, {raw_txt=raw_txt, fea_txt=fea_txt})
   return 'done'
 end

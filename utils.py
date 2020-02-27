@@ -372,17 +372,17 @@ def image_comparison_reward(imgs, hypothesis, ground_truth=None):
     
     sentences = [' '.join([rev_word_map[ind] for ind in sent]) for sent in hypothesis]
 
-    minibatch_words_path = os.path.join(data_folder, 'mini_batch_captions.txt')
+    minibatch_words_path = os.path.join(exp_dir, 'mini_batch_captions.txt')
 
     with open(minibatch_words_path, 'w') as f:
         for sent in sentences:
             f.write(sent + '\n')
 
     # Get encoding (saved as a torchfile)
-    requests.get('http://0.0.0.0:8080/')
+    requests.get('http://0.0.0.0:8080/' + exp_dir)
     
     # Generate images from encoded minbatch (saved to file), convert to tensor, scale and normalize.
-    recreated_imgs = (image_generator())
+    recreated_imgs = (image_generator(exp_dir))
     recreated_imgs = torch.Tensor(recreated_imgs).to(device).permute(0,3,1,2)
     recreated_imgs = normalize(recreated_imgs/torch.max(recreated_imgs))
     
