@@ -75,7 +75,7 @@ def evaluate(beam_size, encoder, decoder, reward_function):
     for i, (image, caps, caplens, allcaps) in enumerate(
             tqdm(loader, desc="EVALUATING AT BEAM SIZE " + str(beam_size))):
 
-        (img_captions, hyp) = get_captions_and_hypothesis(image, caps, caplens, allcaps, encoder, decoder)
+        (img_captions, hyp) = get_captions_and_hypothesis(image, caps, caplens, allcaps, encoder, decoder, beam_size)
 
         references.append(img_captions)
         hypotheses.append(hyp)
@@ -90,14 +90,14 @@ def evaluate(beam_size, encoder, decoder, reward_function):
             regeneration_reward.append(reward_function(img_batch, hypotheses[-32:]))
             enablePrint()
             image_buffer = list()
-            
+            break
     # Calculate BLEU-4 scores
     bleu4 = corpus_bleu(references, hypotheses)
     avg_regeneration_reward = torch.cat(regeneration_reward).mean()
     return (bleu4, avg_regeneration_reward)
 
 
-def get_captions_and_hypothesis(image, caps, caplens, allcaps, encoder, decoder):
+def get_captions_and_hypothesis(image, caps, caplens, allcaps, encoder, decoder, beam_size):
     k = beam_size
 
     # Move to GPU device, if available

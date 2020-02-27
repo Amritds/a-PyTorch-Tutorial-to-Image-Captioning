@@ -2,11 +2,8 @@
 2. Correct validation step in RL training.-----------------------------------------------------------------------DONE.
 5. Fix normalization bug. ---------------------------------------------------------------------------------------DONE.
 
-
-
----------- Add break statements and verify correct behaviour.
-
-
+---------- Add break statements and verify correct behaviour. ---DONE
+----------- Check if multiple gpu training works directly.
 
 3. Enable multiple gpu training through gpu specification. ++++++++ FIX NOW
 4. Add fixed seeds for reproducability in all experiments. ++++++ FIX NOW

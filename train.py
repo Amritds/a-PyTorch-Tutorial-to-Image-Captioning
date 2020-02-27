@@ -432,7 +432,7 @@ def train_RL(train_loader, encoder, decoder, criterion, encoder_optimizer, decod
         batch_time.update(time.time() - start)
 
         start = time.time()
-
+        
         # Print status
         if i % print_freq == 0:
             print('Maximizing sum of Expected Rewards\n'
@@ -443,17 +443,17 @@ def train_RL(train_loader, encoder, decoder, criterion, encoder_optimizer, decod
                                                                           batch_time=batch_time,
                                                                           data_time=data_time,
                                                                           loss=losses))
-
+        
         # Free memory.
         del loss
         del sum_top_scores
         del hypotheses
         del hyp_max
         gc.collect()
-        
+        break
         
 
-def validate(val_loader, encoder, decoder, reward_function=BLEU_reward):
+def validate(encoder, decoder, reward_function=BLEU_reward):
     """
     Performs one epoch's validation for bleu4 and reward specified.
 
@@ -467,14 +467,14 @@ def validate(val_loader, encoder, decoder, reward_function=BLEU_reward):
     
     validation_file = os.path.join(exp_dir, 'validation.txt')
     with open(validation_file, 'a') as f:
-        f.write('BLEU4: ' + str(bleu4)+'     ' + reward_function.__name__ + ': ' + str(avg_recreation_reward)+'\n')
+        f.write('BLEU4: ' + str(bleu4)+'     ' + reward_function.__name__ + ': ' + str(avg_regeneration_reward)+'\n')
    
     decoder.train()
     encoder.train()
     
-    print('\nBLEU4: ' + str(bleu4)+'     RR:' + str(avg_recreation_reward)+'\n')
+    print('\nBLEU4: ' + str(bleu4)+'    ' + reward_function.__name__ + ': '  + str(avg_regeneration_reward)+'\n')
         
-    return (bleu4, avg_recreation_reward)
+    return (bleu4, avg_regeneration_reward)
 
 
 if __name__ == '__main__':

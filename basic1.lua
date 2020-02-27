@@ -44,6 +44,7 @@ if net_txt.protos ~=nil then net_txt = net_txt.protos.enc_doc end
 
 net_txt:evaluate()
 
+
 local opt = opt
 local net_txt = net_txt
 
@@ -56,15 +57,16 @@ local orbit = require"orbit"
 module("basic1", package.seeall, orbit.new)
 
 -- handler
-function index(web, params)
-  filenames = string.format('%s/mini_batch_captions.t7', params.splat[1])
-  queries = string.format('%s/mini_batch_captions.txt', params.splat[1])
+function index(web)
+  path = web.GET['key']
+  filenames = string.format('/data2/adsue/caption_data/%s/mini_batch_captions.t7', path)
+  queries = string.format('/data2/adsue/caption_data/%s/mini_batch_captions.txt', path)
     
   return render_index(web, filenames, queries)
 end
 
 -- dispatch
-basic1:dispatch_get(index, R'/hi/*')
+basic1:dispatch_get(index, '/')
 
 -- render
 function render_index(web, filenames, queries)

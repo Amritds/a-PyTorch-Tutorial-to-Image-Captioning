@@ -39,6 +39,10 @@ exp_dir = os.path.join(data_folder, key)
 if not os.path.exists(exp_dir):
     os.makedirs(exp_dir)
 
+checkpoints_dir = os.path.join(exp_dir,'checkpoints')
+if not os.path.exists(checkpoints_dir):
+    os.makedirs(checkpoints_dir)
+
 resnet = torchvision.models.resnet101(pretrained=True)
 for p in resnet.parameters():
     p.requires_grad = False
@@ -291,8 +295,9 @@ def save_checkpoint(data_name, epoch, epochs_since_improvement, encoder, decoder
              'decoder': decoder,
              'encoder_optimizer': encoder_optimizer,
              'decoder_optimizer': decoder_optimizer}
+    
     filename = training_type + '_checkpoint_' +str(epoch)+'_'+ data_name + '.pth.tar'
-    torch.save(state, os.path.join(exp_dir, 'checkpoints', filename)
+    torch.save(state, os.path.join(checkpoints_dir, filename))
 
 class AverageMeter(object):
     """
@@ -379,7 +384,7 @@ def image_comparison_reward(imgs, hypothesis, ground_truth=None):
             f.write(sent + '\n')
 
     # Get encoding (saved as a torchfile)
-    requests.get('http://0.0.0.0:8080/' + exp_dir)
+    requests.get('http://0.0.0.0:8080/' + '?key='+key)
     
     # Generate images from encoded minbatch (saved to file), convert to tensor, scale and normalize.
     recreated_imgs = (image_generator(exp_dir))
