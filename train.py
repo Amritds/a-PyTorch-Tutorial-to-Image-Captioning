@@ -450,8 +450,7 @@ def train_RL(train_loader, encoder, decoder, criterion, encoder_optimizer, decod
         del hypotheses
         del hyp_max
         gc.collect()
-        break
-        
+                
 
 def validate(encoder, decoder, reward_function=BLEU_reward):
     """

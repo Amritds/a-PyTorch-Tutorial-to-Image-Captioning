@@ -90,7 +90,7 @@ def evaluate(beam_size, encoder, decoder, reward_function):
             regeneration_reward.append(reward_function(img_batch, hypotheses[-32:]))
             enablePrint()
             image_buffer = list()
-            break
+            
     # Calculate BLEU-4 scores
     bleu4 = corpus_bleu(references, hypotheses)
     avg_regeneration_reward = torch.cat(regeneration_reward).mean()
