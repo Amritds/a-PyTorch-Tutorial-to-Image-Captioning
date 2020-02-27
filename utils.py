@@ -17,6 +17,9 @@ from models import ComparisonEncoder
 import torchvision
 from nltk.translate.bleu_score import sentence_bleu
 from StackGAN.code.main_sampler import sample as image_generator
+import yaml
+with open(sys.argv[1], 'r') as ymlfile:
+    cfg = yaml.load(ymlfile)
 
 import torchvision.transforms as transforms
 normalize = transforms.Normalize(mean=[0.485, 0.456, 0.406],
@@ -25,8 +28,16 @@ normalize = transforms.Normalize(mean=[0.485, 0.456, 0.406],
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")  # sets device for model and PyTorch tensors
 
 # Data parameters
-data_folder = '/data2/adsue/caption_data'  # folder with data files saved by create_input_files.py
-data_name = 'coco_5_cap_per_img_5_min_word_freq'  # base name shared by data files
+data_folder = cfg['data_folder']  # folder with data files saved by create_input_files.py
+data_name = cfg['data_name'] # base name shared by data files
+
+
+# Unique directory (defied by key) to store exp outputs
+key = cfg['training_type'] + '_lr_'+str(cfg['decoder_lr']) + '_batch_'+ str(cfg['batch_size']) 
+
+exp_dir = os.path.join(data_folder, key)
+if not os.path.exists(exp_dir):
+    os.makedirs(exp_dir)
 
 resnet = torchvision.models.resnet101(pretrained=True)
 for p in resnet.parameters():
@@ -281,11 +292,7 @@ def save_checkpoint(data_name, epoch, epochs_since_improvement, encoder, decoder
              'encoder_optimizer': encoder_optimizer,
              'decoder_optimizer': decoder_optimizer}
     filename = training_type + '_checkpoint_' +str(epoch)+'_'+ data_name + '.pth.tar'
-    torch.save(state, os.path.join(data_folder, 'checkpoints', filename))
-    # If this checkpoint is the best so far, store a copy so it doesn't get overwritten by a worse checkpoint
-    if is_best:
-        torch.save(state, os.path.join(data_folder,'checkpoints','BEST_' + filename))
-
+    torch.save(state, os.path.join(exp_dir, 'checkpoints', filename)
 
 class AverageMeter(object):
     """

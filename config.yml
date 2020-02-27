@@ -27,5 +27,3 @@ epochs_XE: 0
 epochs_RL: 40
 
 word_map_file: '/data2/adsue/caption_data/WORDMAP_coco_5_cap_per_img_5_min_word_freq.json'
-
-validation_folder: '/data2/adsue/caption_data/validate_lr-6'

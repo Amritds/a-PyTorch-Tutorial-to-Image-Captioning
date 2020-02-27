@@ -1,7 +1,6 @@
-1. CFG file to specify exp parameters, and output directory.-- also directory for minibatch samples. 
+1. CFG file to specify exp parameters, and output directory.-- also directory for minibatch samples, validation file and save checkpoint--- create unique key. ------- Mostly do now.
 
 2. Correct validation step in RL training.-----------------------------------------------------------------------DONE.
-
 3. Enable multiple gpu training through gpu specification. ++++++++ FIX NOW
 4. Add fixed seeds for reproducability in all experiments. ++++++ FIX NOW
 5. Fix normalization bug. ---------------------------------------------------------------------------------------DONE.

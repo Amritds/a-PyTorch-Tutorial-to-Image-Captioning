@@ -1,5 +1,8 @@
 import time
 import sys
+import os
+import gc
+import yaml
 import torch.backends.cudnn as cudnn
 import torch.optim
 import torch.utils.data
@@ -12,9 +15,19 @@ from eval import evaluate
 from datasets import *
 from utils import *
 from nltk.translate.bleu_score import corpus_bleu
-import gc
-import yaml
 
+#---------------------------------------- Init some global variablles -------------------------------------------------------------
+
+reward_map ={'RL_recreation' : image_comparison_reward,
+             'RL_bleu' : BLEU_reward}
+
+best_bleu4 = 0.  # BLEU-4 score right now
+best_reward = 0. # Avg Reward right now
+
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")  # sets device for model and PyTorch tensors
+cudnn.benchmark = True  # set to true only if inputs to model are fixed size; otherwise lot of computational overhead
+
+#---------------------------------------- Load expriment parameters from CFG file -------------------------------------------------
 with open(sys.argv[1], 'r') as ymlfile:
     cfg = yaml.load(ymlfile)
 
@@ -27,10 +40,6 @@ emb_dim = cfg['emb_dim'] # dimension of word embeddings
 attention_dim = cfg['attention_dim']  # dimension of attention linear layers
 decoder_dim = cfg['decoder_dim']  # dimension of decoder RNN
 dropout = cfg['dropout']
-device = torch.device("cuda" if torch.cuda.is_available() else "cpu")  # sets device for model and PyTorch tensors
-cudnn.benchmark = True  # set to true only if inputs to model are fixed size; otherwise lot of computational overhead
-
-print('Device type: ', device)
 
 # Training parameters (General)
 start_epoch = cfg['start_epoch']
@@ -45,12 +54,6 @@ alpha_c = cfg['alpha_c']  # regularization parameter for 'doubly stochastic atte
 desired_training_type = cfg['training_type']
 training_type = desired_training_type
 
-reward_map ={'RL_recreation' : image_comparison_reward,
-             'RL_bleu' : BLEU_reward}
-
-best_bleu4 = 0.  # BLEU-4 score right now
-best_reward = 0. # Avg Reward right now
-
 print_freq = cfg['print_freq'] # print training/validation stats every __ batches
 fine_tune_encoder = cfg['fine_tune_encoder']  # fine-tune encoder?
 checkpoint = cfg['checkpoint'] # path to checkpoint, None if none
@@ -61,7 +64,14 @@ epochs_XE = cfg['epochs_XE']  # number of epochs to train for (if early stopping
 # Training parameters (Expected Reward Maximization)
 epochs_RL = cfg['epochs_RL']  # number of epochs to train for (if early stopping is not triggered)
 
+# Unique directory (defied by key) to store exp outputs
+key = cfg['training_type'] + '_lr_'+str(cfg['decoder_lr']) + '_batch_'+ str(cfg['batch_size']) 
 
+exp_dir = os.path.join(data_folder, key)
+if not os.path.exists(exp_dir):
+    os.makedirs(exp_dir)
+    
+# ------------------------------------ Training and validation code ---------------------------------------------------------------
 def main():
     """
     Training and validation.
@@ -455,7 +465,8 @@ def validate(val_loader, encoder, decoder, reward_function=BLEU_reward):
     
     (bleu4, avg_regeneration_reward) = evaluate(beam_size, encoder, decoder, reward_function)
     
-    with open(cfg['validation_folder'],'a') as f:
+    validation_file = os.path.join(exp_dir, 'validation.txt')
+    with open(validation_file, 'a') as f:
         f.write('BLEU4: ' + str(bleu4)+'     ' + reward_function.__name__ + ': ' + str(avg_recreation_reward)+'\n')
    
     decoder.train()
