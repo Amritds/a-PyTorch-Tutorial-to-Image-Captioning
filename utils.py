@@ -18,6 +18,8 @@ import torchvision
 from nltk.translate.bleu_score import sentence_bleu
 from StackGAN.code.main_sampler import sample as image_generator
 import yaml
+import scipy
+
 with open(sys.argv[1], 'r') as ymlfile:
     cfg = yaml.load(ymlfile)
 
@@ -349,30 +351,111 @@ class RL_loss(_Loss):
         super(RL_loss, self).__init__(size_average=None, reduce=None, reduction='mean')
         self.reward_function = reward_function
 
-    def forward(self, imgs, ground_truth, hypothesis, hyp_max, sum_top_scores):
+    def forward(self, imgs, ground_truth, hypothesis, hyp_max, sum_top_scores, allcaps):
         
         blockPrint() # Avoid verbose print statements
-        advantage = self.reward_function(imgs, hypothesis, ground_truth) - self.reward_function(imgs, hyp_max, ground_truth)
+        
+        advantage = self.reward_function(imgs, hypothesis, save_imgs=False, ground_truth=ground_truth, allcaps=allcaps) -
+                    self.reward_function(imgs, hyp_max, save_imgs=False, ground_truth=ground_truth, allcaps=allcaps)
+            
         enablePrint() # Re-enable print functionality
         
         weighted_sum_top_scores = advantage * sum_top_scores
         return ((-1) * weighted_sum_top_scores.mean()) # Important!!! use negative sum of expected rewards to treat as minimization problem. 
 
-def image_comparison_reward(imgs, hypothesis, ground_truth=None):
+def convert_to_json_and_save(references, hypothesis):
+    hyp_sentences = [(i, sent) for (i,sent) in enumerate(hypothesis)]
+    ref_sentences = []
+    for i, ref_sents in enumerate(references):
+        ref_sentences += [(i, sent) for sent in ref_sents]
+    
+    refs_json = [{'image_id': i, 'caption': r} for (i,r) in ref_sentences]
+    hyps_json = [{'image_id': i, 'caption': r} for (i,r) in hyp_sentences]
+    
+    refs_file = os.path.join(exp_dir, 'refs.json')
+    hyps_file = os.path.join(exp_dir, 'hyps.json')
+    
+    with open(refs_file ,'w') as f:
+        f.write(json.dumps(refs_json))
+    with open(hyps_file ,'w') as f:
+        f.write(json.dumps(hyps_json))    
+
+    
+def compute_cider(references, hypothesis):
+    # Save json files for CIDER computation.
+    convert_to_json_and_save(references, hypothesis)
+
+    # Save params to json for CIDER computation.
+    params = {"pathToData" : exp_dir,
+              "refName" : "refs.json",
+              "candName" : "hyps.json",
+              "resultFile" : os.path.join(exp_dir, "results.json"),
+              "idf" : "corpus"}
+    
+    params_file = os.path.join(exp_dir, 'params.json')
+    with open(params_file ,'w') as f:
+        f.write(json.dumps(params))
+
+    # Compute CIDER scores
+    os.system("bash "+ os.path.join(exp_dir, "../run_cider.sh"))
+    
+    # Read CIDER scores
+    with open(params['resultFile'] ,'r') as f:
+        scores = json.load(f)
+    
+    # Return CIDER scores
+    return (np.mean(scores['CIDEr']), np.mean(scores['CIDErD']))
+    
+def cider_reward(imgs, hypothesis, save_imgs, ground_truth, allcaps):
+    """
+    Note: Uses the sentence index files.
+    """
+    try:
+        sentences = [' '.join([rev_word_map[ind] for ind in sent]) for sent in hypothesis]
+    except:
+        # Load word map from JSON
+        with open(os.path.join('/data2/adsue/caption_data', 'WORDMAP_' + data_name + '.json'), 'r') as j:
+            word_map = json.load(j)
+
+        # Create the reverse word map
+        rev_word_map = {v: k for k, v in word_map.items()}  # ix2word    
+        
+        
+    # References
+    references = []
+    for caps in allcaps:
+        img_caps = caps.tolist()
+        img_captions = list(
+            map(lambda c: [w for w in c if w not in {word_map['<start>'], word_map['<end>'], word_map['<pad>']}],
+                img_caps))  # remove <start> and pads
+        references.append([' '.join([rev_word_map[ind] for ind in sent]) for sent in image_captions])
+          
+    hypothesis = [' '.join([rev_word_map[ind] for ind in sent]) for sent in hypothesis]
+    
+     # Calculate CIDER score
+    (CIDEr, CIDErD) = compute_cider(references, hypotheses)
+    
+    return CIDErD
+    
+def image_comparison_reward(imgs, hypothesis, save_imgs, ground_truth, allcaps):
     # Note: Ground truth captions not required.
     # Translate and save the hypothesis as plain text.
     
-    # Load word map from JSON
-    with open(os.path.join('/data2/adsue/caption_data', 'WORDMAP_' + data_name + '.json'), 'r') as j:
-        word_map = json.load(j)
+    try:
+        sentences = [' '.join([rev_word_map[ind] for ind in sent]) for sent in hypothesis]
+    except:
+        # Load word map from JSON
+        with open(os.path.join('/data2/adsue/caption_data', 'WORDMAP_' + data_name + '.json'), 'r') as j:
+            word_map = json.load(j)
 
-    # Create the reverse word map
-    rev_word_map = {v: k for k, v in word_map.items()}  # ix2word    
+        # Create the reverse word map
+        rev_word_map = {v: k for k, v in word_map.items()}  # ix2word    
+        
+        sentences = [' '.join([rev_word_map[ind] for ind in sent]) for sent in hypothesis]
     
-    sentences = [' '.join([rev_word_map[ind] for ind in sent]) for sent in hypothesis]
-
+    
+    # Save the minibatch sentences.
     minibatch_words_path = os.path.join(exp_dir, 'mini_batch_captions.txt')
-
     with open(minibatch_words_path, 'w') as f:
         for sent in sentences:
             f.write(sent + '\n')
@@ -389,19 +472,29 @@ def image_comparison_reward(imgs, hypothesis, ground_truth=None):
     encoded_original = comparison_encoder(imgs)
     encoded_recreation = comparison_encoder(recreated_imgs)
 
-    # save images and recreated images.
-    #minibatch_original_imgs_path = os.path.join(data_folder, 'minibatch_o_imgs.pkl')
-    #minibatch_recreated_imgs_path = os.path.join(data_folder,'minibatch_r_imgs.pkl')
-    #with open(minibatch_original_imgs_path,'wb') as f:
-    #    pickle.dump(imgs.permute(0,2,3,1).cpu().numpy(), f)
-    #with open(minibatch_recreated_imgs_path, 'wb') as f:
-    #    pickle.dump(recreated_imgs.permute(0,2,3,1).cpu().numpy(), f)
+    if save_imgs:
+        save_images_to_folder(imgs, 'original')
+        save_images_to_folder(recreated_imgs, 'recreated')
+    
     # compute similarity
     similarity = cos(encoded_original, encoded_recreation)
 
     return similarity
 
-def BLEU_reward(imgs, hypothesis, ground_truth):
+def save_images_to_folder(imgs, file_path):
+    
+    file_path = os.path.join(exp_dir, file_path)        
+        
+    if not os.path.exists(file_path):
+        os.makedirs(file_path)
+    
+    # save images and recreated images.
+    x = imgs.permute(0,2,3,1).cpu().numpy()
+    for i in range(len(x)):
+        im = x[i]
+        scipy.misc.imsave(os.path.join(file_path, str(i)+'.jpg'), im)
+        
+def BLEU_reward(imgs, hypothesis, save_imgs, ground_truth, allcaps):
     # Note: images not used.
     
     with open(os.path.join('/data2/adsue/caption_data', 'WORDMAP_' + data_name + '.json'), 'r') as j:

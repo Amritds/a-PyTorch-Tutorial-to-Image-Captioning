@@ -1,0 +1,4 @@
+Traceback (most recent call last):
+  File "cider/cidereval.py", line 12, in <module>
+    config = json.loads(open(sys.argv[1], 'r').read())
+IOError: [Errno 2] No such file or directory: '/home/iitm/a-PyTorch-Tutorial-to-Image-Captioning/workspace/params.json'

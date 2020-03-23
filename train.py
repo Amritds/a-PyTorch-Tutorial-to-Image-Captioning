@@ -19,7 +19,8 @@ from nltk.translate.bleu_score import corpus_bleu
 #---------------------------------------- Init some global variablles -------------------------------------------------------------
 
 reward_map ={'RL_recreation' : image_comparison_reward,
-             'RL_bleu' : BLEU_reward}
+             'RL_bleu' : BLEU_reward,
+             'RL_cider': cider_reward}
 
 best_bleu4 = 0.  # BLEU-4 score right now
 best_reward = 0. # Avg Reward right now
@@ -176,8 +177,8 @@ def training_epochs(encoder, decoder, encoder_optimizer, decoder_optimizer, trai
     if training_type == 'XE':
         for epoch in range(start_epoch, epochs_XE):
 
-            # Decay learning rate after 3 consecutive epochs, and terminate training after 20 if no improvement is seen.
-            if epochs_since_improvement == 20:
+            # Decay learning rate after 3 consecutive epochs, and terminate training after 30 if no improvement is seen.
+            if epochs_since_improvement == 30:
                 break
             if epoch % 3 == 0 and epoch !=0:
                 adjust_learning_rate(decoder_optimizer, 0.8)
@@ -198,9 +199,13 @@ def training_epochs(encoder, decoder, encoder_optimizer, decoder_optimizer, trai
         #-------------------------------------------------------------------------------------------------
 
             # One epoch's validation
-            recent_bleu4, _ = validate(encoder=encoder,
-                                       decoder=decoder)
-
+            try:
+                recent_bleu4, _ = validate(encoder=encoder,
+                                           decoder=decoder)
+            except:
+                print('Validation failed.')
+                recent_bleu4 = -1
+                
             # Check if there was an improvement
             is_best = recent_bleu4 > best_bleu4
             best_bleu4 = max(recent_bleu4, best_bleu4)
@@ -220,8 +225,8 @@ def training_epochs(encoder, decoder, encoder_optimizer, decoder_optimizer, trai
 
         for epoch in range(start_epoch, epochs_RL):
 
-            # Decay learning rate after 3 consecutive epochs, and terminate training after 20 if no improvement is seen.
-            if epochs_since_improvement == 20:
+            # Decay learning rate after 3 consecutive epochs, and terminate training after 30 if no improvement is seen.
+            if epochs_since_improvement == 30:
                 break
             if epoch % 3 == 0 and epoch !=0:
                 adjust_learning_rate(decoder_optimizer, 0.8)
@@ -247,7 +252,8 @@ def training_epochs(encoder, decoder, encoder_optimizer, decoder_optimizer, trai
             _, recent_reward = validate(encoder=encoder,
                                         decoder=decoder,
                                         reward_function=reward_function)
-
+            
+                
             # Check if there was an improvement 
             is_best = recent_reward > best_reward
             best_reward = max(recent_reward, best_reward)
@@ -386,7 +392,7 @@ def train_RL(train_loader, encoder, decoder, criterion, encoder_optimizer, decod
     start = time.time()
 
     # Batches
-    for i, (imgs, caps, caplens) in enumerate(train_loader):
+    for i, (imgs, caps, caplens, allcaps) in enumerate(train_loader):
     
         data_time.update(time.time() - start)
 
@@ -401,7 +407,7 @@ def train_RL(train_loader, encoder, decoder, criterion, encoder_optimizer, decod
         (hypotheses, sum_top_scores) = get_hypothesis_greedy(encoder_out, decoder, sample=True)
         (hyp_max, _) = get_hypothesis_greedy(encoder_out, decoder, sample=False)
         # Calculate loss
-        loss = criterion(imgs, caps, hypotheses, hyp_max, sum_top_scores)
+        loss = criterion(imgs, caps, hypotheses, hyp_max, sum_top_scores, allcaps)
 
         # Back prop.
         decoder_optimizer.zero_grad()
@@ -445,7 +451,7 @@ def train_RL(train_loader, encoder, decoder, criterion, encoder_optimizer, decod
         del hypotheses
         del hyp_max
         gc.collect()
-        
+        break        
 
 def validate(encoder, decoder, reward_function=BLEU_reward):
     """
@@ -457,17 +463,25 @@ def validate(encoder, decoder, reward_function=BLEU_reward):
     decoder.eval()
     encoder.eval()
     
-    (bleu4, avg_regeneration_reward) = evaluate(beam_size, encoder, decoder, reward_function)
+    (bleu4, avg_regeneration_reward, CIDEr, CIDErD) = evaluate(beam_size, encoder, decoder, reward_function)
     
     validation_file = os.path.join(exp_dir, 'validation.txt')
     with open(validation_file, 'a') as f:
-        f.write('BLEU4: ' + str(bleu4)+'     ' + reward_function.__name__ + ': ' + str(avg_regeneration_reward)+'\n')
+        f.write('BLEU4: ' + str(bleu4)+'     ' +
+                reward_function.__name__ + ': ' + str(avg_regeneration_reward) + '     ' +
+                'CIDER: ' + CIDEr + '     ' +
+                'CIDErD: ' + CIDErD +
+                '\n')
    
     decoder.train()
     encoder.train()
     
-    print('\nBLEU4: ' + str(bleu4)+'    ' + reward_function.__name__ + ': '  + str(avg_regeneration_reward)+'\n')
-        
+    print('BLEU4: ' + str(bleu4)+'     ' +
+          reward_function.__name__ + ': ' + str(avg_regeneration_reward) + '     ' +
+          'CIDER: ' + CIDEr + '     ' +
+          'CIDErD: ' + CIDErD +
+          '\n')        
+
     return (bleu4, avg_regeneration_reward)
 
 

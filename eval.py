@@ -10,9 +10,19 @@ from nltk.translate.bleu_score import corpus_bleu
 import torch.nn.functional as F
 from tqdm import tqdm
 import yaml
+import json
+import os
+from utils import *
+import numpy as np
+import json
+
+import torch
+torch.manual_seed(0)
 
 with open(sys.argv[1], 'r') as ymlfile:
     cfg = yaml.load(ymlfile)
+
+exp_dir = sys.argv[2]
 
 import numpy as np
 from utils import image_comparison_reward, blockPrint, enablePrint
@@ -23,6 +33,8 @@ data_name = cfg['data_name']  # base name shared by data files
 
 checkpoint = cfg['checkpoint']  # model checkpoint
 word_map_file = cfg['word_map_file']  # word map, ensure it's the same the data was encoded with and the model was trained with
+
+batch_only = cfg['batch_only']
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")  # sets device for model and PyTorch tensors
 cudnn.benchmark = True  # set to true only if inputs to model are fixed size; otherwise lot of computational overhead
@@ -87,16 +99,25 @@ def evaluate(beam_size, encoder, decoder, reward_function):
         if (i+1)%32 == 0:
             img_batch = torch.cat(image_buffer).to(device)
             blockPrint()
-            regeneration_reward.append(reward_function(img_batch, hypotheses[-32:]))
+            regeneration_reward.append(reward_function(img_batch, hypotheses[-32:], save_imgs=batch_only))
             enablePrint()
             image_buffer = list()
-            
+            if batch_only:
+                break
+        
+    # Calculate CIDER score
+    (CIDEr, CIDErD) = compute_cider(references, hypotheses)
+    
     # Calculate BLEU-4 scores
     bleu4 = corpus_bleu(references, hypotheses)
+    
+    #Calculate Avg reward
     avg_regeneration_reward = torch.cat(regeneration_reward).mean().item()
-    return (bleu4, avg_regeneration_reward)
+    
+    return (bleu4, avg_regeneration_reward, CIDEr, CIDErD)
 
 
+    
 def get_captions_and_hypothesis(image, caps, caplens, allcaps, encoder, decoder, beam_size):
     k = beam_size
 
@@ -185,7 +206,7 @@ def get_captions_and_hypothesis(image, caps, caplens, allcaps, encoder, decoder,
         k_prev_words = next_word_inds[incomplete_inds].unsqueeze(1)
 
         # Break if things have been going on too long
-        if step > 50:
+        if step > 100:
             break
         step += 1
 
@@ -204,7 +225,8 @@ def get_captions_and_hypothesis(image, caps, caplens, allcaps, encoder, decoder,
 
 if __name__ == '__main__':
     beam_size = 1
-    (bleu4, avg_regeneration_reward) = evaluate(beam_size, encoder, decoder)
+    (bleu4, avg_regeneration_reward, CIDEr, CIDErD) = evaluate(beam_size, encoder, decoder, image_comparison_reward)
     print("\nBLEU-4 score @ beam size of %d is %.4f." % (beam_size, bleu4))
     print("\nAverage Regeneration-Reward @ beam size of %d is %.4f." % (beam_size, avg_regeneration_reward))
-
+    print("\nCIDER score @ beam size of %d is %.4f." % (beam_size, CIDEr))
+    print("\nCIDER-D score @ beam size of %d is %.4f." % (beam_size, CIDErD))
