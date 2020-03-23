@@ -478,8 +478,8 @@ def validate(encoder, decoder, reward_function=BLEU_reward):
     
     print('BLEU4: ' + str(bleu4)+'     ' +
           reward_function.__name__ + ': ' + str(avg_regeneration_reward) + '     ' +
-          'CIDER: ' + CIDEr + '     ' +
-          'CIDErD: ' + CIDErD +
+          'CIDER: ' + str(CIDEr) + '     ' +
+          'CIDErD: ' + str(CIDErD) +
           '\n')        
 
     return (bleu4, avg_regeneration_reward)
