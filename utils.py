@@ -50,7 +50,7 @@ cos = CosineSimilarity(dim=1, eps=1e-6)
 
 global word_map, rev_word_map
 
-sentence_index_map = {'TRAIN':None,
+sentence_index = {'TRAIN':None,
                       'VAL': None,
                       'TEST': None}
 
