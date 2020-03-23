@@ -48,8 +48,9 @@ comparison_encoder = resnet.to(device)
 
 cos = CosineSimilarity(dim=1, eps=1e-6)
 
-global word_map, rev_word_map
+global word_map, rev_word_map, train_sentence_index
 
+train_sentence_index = None
 
 
 # Disable
@@ -351,11 +352,11 @@ class RL_loss(_Loss):
         super(RL_loss, self).__init__(size_average=None, reduce=None, reduction='mean')
         self.reward_function = reward_function
 
-    def forward(self, imgs, ground_truth, hypothesis, hyp_max, sum_top_scores, allcaps):
+    def forward(self, imgs, ground_truth, hypothesis, hyp_max, sum_top_scores):
         
         blockPrint() # Avoid verbose print statements
         
-        advantage = self.reward_function(imgs, hypothesis, save_imgs=False, ground_truth=ground_truth, allcaps=allcaps) - self.reward_function(imgs, hyp_max, save_imgs=False, ground_truth=ground_truth, allcaps=allcaps)
+        advantage = self.reward_function(imgs, hypothesis, save_imgs=False, ground_truth=ground_truth) - self.reward_function(imgs, hyp_max, save_imgs=False, ground_truth=ground_truth)
             
         enablePrint() # Re-enable print functionality
         
@@ -405,12 +406,14 @@ def compute_cider(references, hypothesis):
     # Return CIDER scores
     return (np.mean(scores['CIDEr']), np.mean(scores['CIDErD']))
     
-def cider_reward(imgs, hypothesis, save_imgs, ground_truth, allcaps):
+def cider_reward(imgs, hypothesis, save_imgs, ground_truth):
     """
-    Note: Uses the sentence index files.
+    Note: Uses the sentence index.
     """
+    global train_sentence_index
+    
     try:
-        sentences = [' '.join([rev_word_map[ind] for ind in sent]) for sent in hypothesis]
+        hypothesis_sentences = [' '.join([rev_word_map[ind] for ind in sent]) for sent in hypothesis]
     except:
         # Load word map from JSON
         with open(os.path.join('/data2/adsue/caption_data', 'WORDMAP_' + data_name + '.json'), 'r') as j:
@@ -419,24 +422,21 @@ def cider_reward(imgs, hypothesis, save_imgs, ground_truth, allcaps):
         # Create the reverse word map
         rev_word_map = {v: k for k, v in word_map.items()}  # ix2word    
         
+        hypothesis_sentences = [' '.join([rev_word_map[ind] for ind in sent]) for sent in hypothesis]
         
+    if train_sentence_index ==None:
+        with open(os.path.join('/data2/adsue/caption_data','TRAIN_CAPTIONS_sentence_index.json'),'r') as f:
+            train_sentence_index = json.load(f)
+  
     # References
-    references = []
-    for caps in allcaps:
-        img_caps = caps.tolist()
-        img_captions = list(
-            map(lambda c: [w for w in c if w not in {word_map['<start>'], word_map['<end>'], word_map['<pad>']}],
-                img_caps))  # remove <start> and pads
-        references.append([' '.join([rev_word_map[ind] for ind in sent]) for sent in image_captions])
-          
-    hypothesis = [' '.join([rev_word_map[ind] for ind in sent]) for sent in hypothesis]
+    references_sentences = [train_sentence_index[hyp] for hyp in hypothesis_sentences]
     
      # Calculate CIDER score
-    (CIDEr, CIDErD) = compute_cider(references, hypotheses)
+    (CIDEr, CIDErD) = compute_cider(reference_sentences, hypothesis_sentences)
     
     return CIDErD
     
-def image_comparison_reward(imgs, hypothesis, save_imgs, ground_truth, allcaps):
+def image_comparison_reward(imgs, hypothesis, save_imgs, ground_truth):
     # Note: Ground truth captions not required.
     # Translate and save the hypothesis as plain text.
     
@@ -493,7 +493,7 @@ def save_images_to_folder(imgs, file_path):
         im = x[i]
         scipy.misc.imsave(os.path.join(file_path, str(i)+'.jpg'), im)
         
-def BLEU_reward(imgs, hypothesis, save_imgs, ground_truth, allcaps):
+def BLEU_reward(imgs, hypothesis, save_imgs, ground_truth):
     # Note: images not used.
     
     with open(os.path.join('/data2/adsue/caption_data', 'WORDMAP_' + data_name + '.json'), 'r') as j:

@@ -392,7 +392,7 @@ def train_RL(train_loader, encoder, decoder, criterion, encoder_optimizer, decod
     start = time.time()
 
     # Batches
-    for i, (imgs, caps, caplens, allcaps) in enumerate(train_loader):
+    for i, (imgs, caps, caplens) in enumerate(train_loader):
     
         data_time.update(time.time() - start)
 
@@ -407,7 +407,7 @@ def train_RL(train_loader, encoder, decoder, criterion, encoder_optimizer, decod
         (hypotheses, sum_top_scores) = get_hypothesis_greedy(encoder_out, decoder, sample=True)
         (hyp_max, _) = get_hypothesis_greedy(encoder_out, decoder, sample=False)
         # Calculate loss
-        loss = criterion(imgs, caps, hypotheses, hyp_max, sum_top_scores, allcaps)
+        loss = criterion(imgs, caps, hypotheses, hyp_max, sum_top_scores)
 
         # Back prop.
         decoder_optimizer.zero_grad()
