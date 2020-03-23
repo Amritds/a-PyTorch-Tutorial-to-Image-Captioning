@@ -397,7 +397,7 @@ def compute_cider(references, hypothesis):
         f.write(json.dumps(params))
 
     # Compute CIDER scores
-    os.system("source activate cider_env && python -u cider/cidereval.py "+exp_dir+"/params.json &> "+exp_dir+"/out_cider &")
+    os.system("#!/bin/bash && source activate cider_env && python -u cider/cidereval.py "+exp_dir+"/params.json &> "+exp_dir+"/out_cider &")
     
     # Read CIDER scores
     with open(params['resultFile'] ,'r') as f:
