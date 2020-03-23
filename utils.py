@@ -382,7 +382,7 @@ def convert_to_json_and_save(references, hypothesis):
         f.write(json.dumps(hyps_json))    
 
     
-def compute_cider(references, hypothesis):
+def compute_cider(references, hypothesis, split):
     # Save json files for CIDER computation.
     convert_to_json_and_save(references, hypothesis)
 
@@ -392,6 +392,9 @@ def compute_cider(references, hypothesis):
               "candName" : "hyps.json",
               "resultFile" : os.path.join(exp_dir, "results.json"),
               "idf" : "corpus"}
+    
+    if split!=='TEST':
+        params.update({"idf": "coco-val-df"})
     
     params_file = os.path.join(exp_dir, 'params.json')
     with open(params_file ,'w') as f:
@@ -440,7 +443,7 @@ def cider_reward(imgs, hypothesis, save_imgs, ground_truth, split='TRAIN'):
     reference_sentences = [sentence_index[split][true_sent] for (hyp,true_sent) in zip(hypothesis_sentences, ground_truth_sentence)]
     
     # Calculate CIDER score
-    (CIDEr, CIDErD) = compute_cider(reference_sentences, hypothesis_sentences)
+    (CIDEr, CIDErD) = compute_cider(reference_sentences, hypothesis_sentences, split)
     
     return float(CIDErD)
     
