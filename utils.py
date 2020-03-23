@@ -429,8 +429,11 @@ def cider_reward(imgs, hypothesis, save_imgs, ground_truth):
             train_sentence_index = json.load(f)
   
     # References
-    ground_truth_sentence = [' '.join([rev_word_map[ind] for ind in sent]) for sent in ground_truth.tolist()]
-    references_sentences = [train_sentence_index[ground_truth_sentence] for hyp in hypothesis_sentences]
+    
+    ground_truth_sentence = [' '.join([rev_word_map[ind] for ind in sent if ind not in {word_map['<start>'], word_map['<end>'], word_map['<pad>']}]) for sent in ground_truth.tolist()]
+    
+    
+    references_sentences = [train_sentence_index[true_sent] for (hyp,true_sent) in zip(hypothesis_sentences, ground_truth_sentence)]
     
     # Calculate CIDER score
     (CIDEr, CIDErD) = compute_cider(reference_sentences, hypothesis_sentences)
