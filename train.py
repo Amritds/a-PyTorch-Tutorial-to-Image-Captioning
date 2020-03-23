@@ -469,8 +469,8 @@ def validate(encoder, decoder, reward_function=BLEU_reward):
     with open(validation_file, 'a') as f:
         f.write('BLEU4: ' + str(bleu4)+'     ' +
                 reward_function.__name__ + ': ' + str(avg_regeneration_reward) + '     ' +
-                'CIDER: ' + CIDEr + '     ' +
-                'CIDErD: ' + CIDErD +
+                'CIDER: ' + str(CIDEr) + '     ' +
+                'CIDErD: ' + str(CIDErD) +
                 '\n')
    
     decoder.train()
