@@ -397,7 +397,7 @@ def compute_cider(references, hypothesis):
         f.write(json.dumps(params))
 
     # Compute CIDER scores
-    requests.get('http://0.0.0.0:5000/cider/'+'<'+params_file+'>')
+    requests.get('http://0.0.0.0:5000/cider/'+params_file.replace('/','_'))
     
     # Read CIDER scores
     with open(params['resultFile'] ,'r') as f:
