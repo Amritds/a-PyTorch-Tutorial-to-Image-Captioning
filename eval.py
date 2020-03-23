@@ -125,7 +125,10 @@ def evaluate(beam_size, encoder, decoder, reward_function):
     bleu4 = corpus_bleu(references, hypothesis)
     
     #Calculate Avg reward
-    avg_regeneration_reward = torch.cat(regeneration_reward).mean().item()
+    if reward_function == image_comparison_reward:
+        avg_regeneration_reward = torch.cat(regeneration_reward).mean().item()
+    else:
+        avg_regeneration_reward = np.mean(regeneration_reward)
     
     return (bleu4, avg_regeneration_reward, CIDEr, CIDErD)
 
