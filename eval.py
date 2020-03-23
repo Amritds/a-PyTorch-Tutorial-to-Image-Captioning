@@ -59,6 +59,15 @@ normalize = transforms.Normalize(mean=[0.485, 0.456, 0.406],
                                  std=[0.229, 0.224, 0.225])
 
 
+# Load word map from JSON
+with open(os.path.join('/data2/adsue/caption_data', 'WORDMAP_' + data_name + '.json'), 'r') as j:
+    word_map = json.load(j)
+
+# Create the reverse word map
+rev_word_map = {v: k for k, v in word_map.items()}  # ix2word    
+        
+        
+
 def evaluate(beam_size, encoder, decoder, reward_function):
     """
     Evaluation
@@ -78,7 +87,7 @@ def evaluate(beam_size, encoder, decoder, reward_function):
     # If for n images, we have n hypotheses, and references a, b, c... for each image, we need -
     # references = [[ref1a, ref1b, ref1c], [ref2a, ref2b], ...], hypotheses = [hyp1, hyp2, ...]
     references = list()
-    hypotheses = list()
+    hypothesis = list()
     
     image_buffer = list()
     regeneration_reward = list()
@@ -90,23 +99,27 @@ def evaluate(beam_size, encoder, decoder, reward_function):
         (img_captions, hyp) = get_captions_and_hypothesis(image, caps, caplens, allcaps, encoder, decoder, beam_size)
 
         references.append(img_captions)
-        hypotheses.append(hyp)
+        hypothesis.append(hyp)
         
         image_buffer.append(image)
         
-        assert len(references) == len(hypotheses)
+        assert len(references) == len(hypothesis)
 
         if (i+1)%32 == 0:
             img_batch = torch.cat(image_buffer).to(device)
             blockPrint()
-            regeneration_reward.append(reward_function(img_batch, hypotheses[-32:], save_imgs=batch_only, ground_truth=None))
+            regeneration_reward.append(reward_function(img_batch, hypothesis[-32:], save_imgs=batch_only, ground_truth=None))
             enablePrint()
             image_buffer = list()
             if batch_only:
                 break
         
+        
+    hypothesis_sentences = [' '.join([rev_word_map[ind] for ind in sent]) for sent in hypothesis]
+    reference_sentences =  [[' '.join([rev_word_map[ind] for ind in sent]) for sent in ref_sents] for ref_sents in references]
+    
     # Calculate CIDER score
-    (CIDEr, CIDErD) = compute_cider(references, hypotheses)
+    (CIDEr, CIDErD) = compute_cider(reference_sentences, hypothesis_sentences)
     
     # Calculate BLEU-4 scores
     bleu4 = corpus_bleu(references, hypotheses)

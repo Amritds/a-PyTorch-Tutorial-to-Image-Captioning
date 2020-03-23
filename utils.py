@@ -431,7 +431,7 @@ def cider_reward(imgs, hypothesis, save_imgs, ground_truth):
     # References
     references_sentences = [train_sentence_index[hyp] for hyp in hypothesis_sentences]
     
-     # Calculate CIDER score
+    # Calculate CIDER score
     (CIDEr, CIDErD) = compute_cider(reference_sentences, hypothesis_sentences)
     
     return CIDErD
