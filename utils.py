@@ -430,7 +430,7 @@ def cider_reward(imgs, hypothesis, save_imgs, ground_truth):
   
     # References
     ground_truth_sentence = [' '.join([rev_word_map[ind] for ind in sent]) for sent in ground_truth.tolist()]
-    references_sentences = [train_sentence_index[hyp] for hyp in hypothesis_sentences]
+    references_sentences = [train_sentence_index[ground_truth_sentence] for hyp in hypothesis_sentences]
     
     # Calculate CIDER score
     (CIDEr, CIDErD) = compute_cider(reference_sentences, hypothesis_sentences)
