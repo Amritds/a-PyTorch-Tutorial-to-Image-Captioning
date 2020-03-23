@@ -48,10 +48,11 @@ comparison_encoder = resnet.to(device)
 
 cos = CosineSimilarity(dim=1, eps=1e-6)
 
-global word_map, rev_word_map, train_sentence_index
+global word_map, rev_word_map
 
-train_sentence_index = None
-
+sentence_index_map = {'TRAIN':train_sentence_index,
+                      'VAL': val_sentence_index,
+                      'TEST': test_sentence_index}
 
 # Disable
 def blockPrint():
@@ -406,11 +407,10 @@ def compute_cider(references, hypothesis):
     # Return CIDER scores
     return (np.mean(scores['CIDEr']), np.mean(scores['CIDErD']))
     
-def cider_reward(imgs, hypothesis, save_imgs, ground_truth):
+def cider_reward(imgs, hypothesis, save_imgs, ground_truth, split='TRAIN'):
     """
     Note: Uses the sentence index.
     """
-    global train_sentence_index
     
     try:
         hypothesis_sentences = [' '.join([rev_word_map[ind] for ind in sent]) for sent in hypothesis]
@@ -424,9 +424,9 @@ def cider_reward(imgs, hypothesis, save_imgs, ground_truth):
         
         hypothesis_sentences = [' '.join([rev_word_map[ind] for ind in sent]) for sent in hypothesis]
         
-    if train_sentence_index ==None:
-        with open(os.path.join('/data2/adsue/caption_data','TRAIN_CAPTIONS_sentence_index.json'),'r') as f:
-            train_sentence_index = json.load(f)
+    if sentence_index[split] ==None:
+        with open(os.path.join('/data2/adsue/caption_data',split+'_CAPTIONS_sentence_index.json'),'r') as f:
+            sentence_index[split] = json.load(f)
   
     # References
     try:
@@ -437,14 +437,14 @@ def cider_reward(imgs, hypothesis, save_imgs, ground_truth):
     ground_truth_sentence = [' '.join([rev_word_map[ind] for ind in sent if ind not in {word_map['<start>'], word_map['<end>'], word_map['<pad>']}]) for sent in ground_truth_list]
     
     
-    reference_sentences = [train_sentence_index[true_sent] for (hyp,true_sent) in zip(hypothesis_sentences, ground_truth_sentence)]
+    reference_sentences = [sentence_index[split][true_sent] for (hyp,true_sent) in zip(hypothesis_sentences, ground_truth_sentence)]
     
     # Calculate CIDER score
     (CIDEr, CIDErD) = compute_cider(reference_sentences, hypothesis_sentences)
     
     return float(CIDErD)
     
-def image_comparison_reward(imgs, hypothesis, save_imgs, ground_truth):
+def image_comparison_reward(imgs, hypothesis, save_imgs, ground_truth, split='TRAIN'):
     # Note: Ground truth captions not required.
     # Translate and save the hypothesis as plain text.
     
@@ -501,7 +501,7 @@ def save_images_to_folder(imgs, file_path):
         im = x[i]
         scipy.misc.imsave(os.path.join(file_path, str(i)+'.jpg'), im)
         
-def BLEU_reward(imgs, hypothesis, save_imgs, ground_truth):
+def BLEU_reward(imgs, hypothesis, save_imgs, ground_truth, split='TRAIN'):
     # Note: images not used.
     
     with open(os.path.join('/data2/adsue/caption_data', 'WORDMAP_' + data_name + '.json'), 'r') as j:
