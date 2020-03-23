@@ -50,9 +50,9 @@ cos = CosineSimilarity(dim=1, eps=1e-6)
 
 global word_map, rev_word_map
 
-sentence_index_map = {'TRAIN':train_sentence_index,
-                      'VAL': val_sentence_index,
-                      'TEST': test_sentence_index}
+sentence_index_map = {'TRAIN':None,
+                      'VAL': None,
+                      'TEST': None}
 
 # Disable
 def blockPrint():
