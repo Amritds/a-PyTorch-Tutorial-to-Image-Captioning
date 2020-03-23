@@ -122,7 +122,7 @@ def evaluate(beam_size, encoder, decoder, reward_function):
     (CIDEr, CIDErD) = compute_cider(reference_sentences, hypothesis_sentences)
     
     # Calculate BLEU-4 scores
-    bleu4 = corpus_bleu(references, hypotheses)
+    bleu4 = corpus_bleu(references, hypothesis)
     
     #Calculate Avg reward
     avg_regeneration_reward = torch.cat(regeneration_reward).mean().item()
