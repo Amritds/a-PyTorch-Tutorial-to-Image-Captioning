@@ -429,7 +429,7 @@ def cider_reward(imgs, hypothesis, save_imgs, ground_truth):
             train_sentence_index = json.load(f)
   
     # References
-    ground_truth_list = [sent.tolist() for sent in ground_truth.tolist()]
+    ground_truth_list = ground_truth.tolist()
     ground_truth_sentence = [' '.join([rev_word_map[ind] for ind in sent if ind not in {word_map['<start>'], word_map['<end>'], word_map['<pad>']}]) for sent in ground_truth_list]
     
     
