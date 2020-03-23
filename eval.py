@@ -108,7 +108,7 @@ def evaluate(beam_size, encoder, decoder, reward_function):
         if (i+1)%32 == 0:
             img_batch = torch.cat(image_buffer).to(device)
             blockPrint()
-            regeneration_reward.append(reward_function(img_batch, hypothesis[-32:], save_imgs=batch_only, ground_truth=None))
+            regeneration_reward.append(reward_function(img_batch, hypothesis[-32:], save_imgs=batch_only, ground_truth=references[-32:]))
             enablePrint()
             image_buffer = list()
             if batch_only:

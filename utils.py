@@ -438,7 +438,7 @@ def cider_reward(imgs, hypothesis, save_imgs, ground_truth):
     # Calculate CIDER score
     (CIDEr, CIDErD) = compute_cider(reference_sentences, hypothesis_sentences)
     
-    return CIDErD
+    return float(CIDErD)
     
 def image_comparison_reward(imgs, hypothesis, save_imgs, ground_truth):
     # Note: Ground truth captions not required.
