@@ -20,7 +20,9 @@ from nltk.translate.bleu_score import corpus_bleu
 
 reward_map ={'RL_recreation' : image_comparison_reward,
              'RL_bleu' : BLEU_reward,
-             'RL_cider': cider_reward}
+             'RL_cider': cider_reward,
+             'RL_recreation_cider_balanced': image_comparison_cider_reward_balanced,
+             'RL_recreation_cider_not_balanced': image_comparison_cider_reward_not_balanced}
 
 best_bleu4 = 0.  # BLEU-4 score right now
 best_reward = 0. # Avg Reward right now

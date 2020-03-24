@@ -410,6 +410,18 @@ def compute_cider(references, hypothesis, split):
     # Return CIDER scores
     return (np.mean(scores['CIDEr']), np.mean(scores['CIDErD']))
     
+def image_comparison_cider_reward_balanced(imgs, hypothesis, save_imgs, ground_truth, split='TRAIN'):
+    R_cider = cider_reward(imgs, hypothesis, save_imgs, ground_truth, split)
+    R_recreation = image_comparison_reward(imgs, hypothesis, save_imgs, ground_truth, split)
+    
+    return (0.5*(R_cider) + 0.5*(R_recreation))
+ 
+def image_comparison_cider_reward_not_balanced(imgs, hypothesis, save_imgs, ground_truth, split='TRAIN'):
+    R_cider = cider_reward(imgs, hypothesis, save_imgs, ground_truth, split)
+    R_recreation = image_comparison_reward(imgs, hypothesis, save_imgs, ground_truth, split)
+    
+    return (0.25*(R_cider) + 0.75*(R_recreation))
+
 def cider_reward(imgs, hypothesis, save_imgs, ground_truth, split='TRAIN'):
     """
     Note: Uses the sentence index.
