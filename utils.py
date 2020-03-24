@@ -391,8 +391,7 @@ def compute_cider(references, hypothesis, split):
               "refName" : "refs.json",
               "candName" : "hyps.json",
               "resultFile" : os.path.join(exp_dir, "results.json"),
-              "idf" : "corpus",
-              "split": split}
+              "idf" : "corpus"}
     
     if split!='TEST':
         params.update({"idf": "coco-val-df"})
@@ -409,7 +408,7 @@ def compute_cider(references, hypothesis, split):
         scores = json.load(f)
     
     # Return CIDER scores
-    return (np.mean(scores['CIDEr']), np.mean(scores['CIDErD']))
+    return np.mean(scores['CIDErD'])
     
 def image_comparison_cider_reward_balanced(imgs, hypothesis, save_imgs, ground_truth, split='TRAIN'):
     R_cider = cider_reward(imgs, hypothesis, save_imgs, ground_truth, split)
@@ -458,7 +457,7 @@ def cider_reward(imgs, hypothesis, save_imgs, ground_truth, split='TRAIN'):
     # Calculate CIDER scores
     cider_rewards = []
     for refs, hyps in zip(reference_sentences, hypothesis_sentences):
-        (CIDEr, CIDErD) = compute_cider([refs], [hyps], split)
+        CIDErD = compute_cider([refs], [hyps], split)
         cider_rewards.append(float(CIDErD))
         
     return torch.Tensor(cider_rewards).to(device)

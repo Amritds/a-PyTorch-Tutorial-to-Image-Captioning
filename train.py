@@ -465,13 +465,12 @@ def validate(encoder, decoder, reward_function=BLEU_reward):
     decoder.eval()
     encoder.eval()
     
-    (bleu4, avg_regeneration_reward, CIDEr, CIDErD) = evaluate(beam_size, encoder, decoder, reward_function)
+    (bleu4, avg_regeneration_reward, CIDErD) = evaluate(beam_size, encoder, decoder, reward_function)
     
     validation_file = os.path.join(exp_dir, 'validation.txt')
     with open(validation_file, 'a') as f:
         f.write('BLEU4: ' + str(bleu4)+'     ' +
                 reward_function.__name__ + ': ' + str(avg_regeneration_reward) + '     ' +
-                'CIDER: ' + str(CIDEr) + '     ' +
                 'CIDErD: ' + str(CIDErD) +
                 '\n')
    
@@ -480,7 +479,6 @@ def validate(encoder, decoder, reward_function=BLEU_reward):
     
     print('BLEU4: ' + str(bleu4)+'     ' +
           reward_function.__name__ + ': ' + str(avg_regeneration_reward) + '     ' +
-          'CIDER: ' + str(CIDEr) + '     ' +
           'CIDErD: ' + str(CIDErD) +
           '\n')        
 
