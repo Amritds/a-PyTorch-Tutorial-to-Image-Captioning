@@ -391,7 +391,8 @@ def compute_cider(references, hypothesis, split):
               "refName" : "refs.json",
               "candName" : "hyps.json",
               "resultFile" : os.path.join(exp_dir, "results.json"),
-              "idf" : "corpus"}
+              "idf" : "corpus",
+              "split": split}
     
     if split!='TEST':
         params.update({"idf": "coco-val-df"})
