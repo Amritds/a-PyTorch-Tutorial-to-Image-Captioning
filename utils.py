@@ -460,7 +460,7 @@ def cider_reward(imgs, hypothesis, save_imgs, ground_truth, split='TRAIN'):
         (CIDEr, CIDErD) = compute_cider([refs], [hyps], split)
         cider_rewards.append(float(CIDErD))
         
-    return torch.Tensor(cider_rewards)
+    return torch.Tensor(cider_rewards).to(device)
     
 def image_comparison_reward(imgs, hypothesis, save_imgs, ground_truth, split='TRAIN'):
     # Note: Ground truth captions not required.
