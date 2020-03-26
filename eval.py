@@ -238,8 +238,7 @@ def get_captions_and_hypothesis(image, caps, caplens, allcaps, encoder, decoder,
 
 if __name__ == '__main__':
     beam_size = 1
-    (bleu4, avg_regeneration_reward, CIDEr, CIDErD) = evaluate(beam_size, encoder, decoder, image_comparison_reward)
+    (bleu4, avg_regeneration_reward, CIDErD) = evaluate(beam_size, encoder, decoder, image_comparison_reward)
     print("\nBLEU-4 score @ beam size of %d is %.4f." % (beam_size, bleu4))
     print("\nAverage Regeneration-Reward @ beam size of %d is %.4f." % (beam_size, avg_regeneration_reward))
-    print("\nCIDER score @ beam size of %d is %.4f." % (beam_size, CIDEr))
     print("\nCIDER-D score @ beam size of %d is %.4f." % (beam_size, CIDErD))
