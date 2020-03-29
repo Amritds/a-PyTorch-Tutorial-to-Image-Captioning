@@ -382,7 +382,7 @@ def convert_to_json_and_save(references, hypothesis):
         f.write(json.dumps(hyps_json))    
 
     
-def compute_cider(references, hypothesis, split):
+def compute_cider(references, hypothesis, split, get_average=True):
     # Save json files for CIDER computation.
     convert_to_json_and_save(references, hypothesis)
 
@@ -408,7 +408,10 @@ def compute_cider(references, hypothesis, split):
         scores = json.load(f)
     
     # Return CIDER scores
-    return np.mean(scores['CIDErD'])
+    if get_average:
+        return np.mean(scores['CIDErD'])
+    
+    return scores['CIDErD']
     
 def image_comparison_cider_reward_balanced(imgs, hypothesis, save_imgs, ground_truth, split='TRAIN'):
     R_cider = cider_reward(imgs, hypothesis, save_imgs, ground_truth, split)
@@ -455,10 +458,8 @@ def cider_reward(imgs, hypothesis, save_imgs, ground_truth, split='TRAIN'):
     reference_sentences = [sentence_index[split][true_sent] for (hyp,true_sent) in zip(hypothesis_sentences, ground_truth_sentence)]
     
     # Calculate CIDER scores
-    cider_rewards = []
-    for refs, hyps in zip(reference_sentences, hypothesis_sentences):
-        CIDErD = compute_cider([refs], [hyps], split)
-        cider_rewards.append(float(CIDErD))
+    cider_rewards = compute_cider(reference_sentences, hypothesis_sentences, split, get_average=False)
+    cider_rewards = [float(x) for x in cider_rewards]
         
     return torch.Tensor(cider_rewards).to(device)
     
