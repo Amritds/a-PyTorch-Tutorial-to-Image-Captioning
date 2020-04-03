@@ -576,7 +576,7 @@ def train_XE_RL(train_loader, encoder, decoder, criterion_xe, criterion_rl, enco
 
         # Back prop.--------------------------------------------------------------------------------------------- XE_RL
         
-        loss = proportion['xe']* loss_xe + proportion['rl']*loss_rl
+        loss = (proportion['xe']* loss_xe + proportion['rl']*loss_rl)/ (proportion['xe']+proportion['rl'])
         
         decoder_optimizer.zero_grad()
         if encoder_optimizer is not None:
