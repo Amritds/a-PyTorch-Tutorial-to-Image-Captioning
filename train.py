@@ -67,6 +67,8 @@ epochs_XE = cfg['epochs_XE']  # number of epochs to train for (if early stopping
 # Training parameters (Expected Reward Maximization)
 epochs_RL = cfg['epochs_RL']  # number of epochs to train for (if early stopping is not triggered)
 
+proportion = cfg['proportion']
+
 exp_dir = sys.argv[2]
     
 # ------------------------------------ Training and validation code ---------------------------------------------------------------
@@ -220,6 +222,57 @@ def training_epochs(encoder, decoder, encoder_optimizer, decoder_optimizer, trai
             # Save checkpoint
             save_checkpoint(data_name, epoch, epochs_since_improvement, encoder, decoder, encoder_optimizer,
                         decoder_optimizer, is_best, training_type, bleu4=recent_bleu4)    
+
+    elif training_type[:5]== 'XE_RL':
+        
+        for epoch in range(start_epoch, epochs_RL):
+
+            # Decay learning rate after 3 consecutive epochs, and terminate training after 30 if no improvement is seen.
+            if epochs_since_improvement == 30:
+                break
+            if epoch % 3 == 0 and epoch !=0:
+                adjust_learning_rate(decoder_optimizer, 0.8)
+                if fine_tune_encoder:
+                    adjust_learning_rate(encoder_optimizer, 0.8)
+
+            # One epoch's training maximizing the sum of expected rewards loss function
+            
+            criterion_xe = nn.CrossEntropyLoss().to(device)
+            
+            reward_function = reward_map[training_type[3:]]
+            criterion_rl = RL_loss(reward_function).to(device)
+            
+
+            train_XE_RL(train_loader=train_loader,
+                        encoder=encoder,
+                        decoder=decoder,
+                        criterion_xe=criterion_xe,
+                        criterion_rl=criterion_rl,
+                        encoder_optimizer=encoder_optimizer,
+                        decoder_optimizer=decoder_optimizer,
+                        epoch=epoch,
+                        proportion=proportion)
+
+        #-------------------------------------------------------------------------------------------------
+
+            # One epoch's validation (Computes average reward for the epoch)
+            _, recent_reward = validate(encoder=encoder,
+                                        decoder=decoder,
+                                        reward_function=reward_function)
+            
+                
+            # Check if there was an improvement 
+            is_best = recent_reward > best_reward
+            best_reward = max(recent_reward, best_reward)
+            if not is_best:
+                epochs_since_improvement += 1
+                print("\nEpochs since last improvement: %d\n" % (epochs_since_improvement,))
+            else:
+                epochs_since_improvement = 0
+
+            # Save checkpoint
+            save_checkpoint(data_name, epoch, epochs_since_improvement, encoder, decoder, encoder_optimizer,
+                            decoder_optimizer, is_best, training_type, reward=recent_reward)  
 
 
     # BEGIN RL TRAINING -------------------------------
@@ -452,7 +505,121 @@ def train_RL(train_loader, encoder, decoder, criterion, encoder_optimizer, decod
         del sum_top_scores
         del hypotheses
         del hyp_max
-        gc.collect()        
+        gc.collect()      
+        
+def train_XE_RL(train_loader, encoder, decoder, criterion_xe, criterion_rl, encoder_optimizer, decoder_optimizer, epoch, proportion):
+    """
+    Performs one epoch's training for Expected rewards maximization.
+
+    :param train_loader: DataLoader for training data
+    :param encoder: encoder model
+    :param decoder: decoder model
+    :param criterion: loss layer
+    :param encoder_optimizer: optimizer to update encoder's weights (if fine-tuning)
+    :param decoder_optimizer: optimizer to update decoder's weights
+    :param epoch: epoch number
+    """
+    
+    decoder.eval()  # evaluation mode (dropout and batchnorm is not used)
+    encoder.eval()
+
+    batch_time = AverageMeter()  # forward prop. + back prop. time
+    data_time = AverageMeter()  # data loading time
+    losses = AverageMeter()  # loss (per caption)
+    
+    start = time.time()
+
+    # Batches
+    for i, (imgs, caps, caplens) in enumerate(train_loader):
+    
+        data_time.update(time.time() - start)
+
+        # Move to GPU, if available
+        imgs = imgs.to(device)
+        caps = caps.to(device)
+        caplens = caplens.to(device)
+
+        # Forward prop.--------------------------------------------------------------------------------- RL
+        encoder_out = encoder(imgs)
+        
+        (hypotheses, sum_top_scores) = get_hypothesis_greedy(encoder_out, decoder, sample=True)
+        (hyp_max, _) = get_hypothesis_greedy(encoder_out, decoder, sample=False)
+        # Calculate loss
+        loss_rl = criterion_rl(imgs, caps, hypotheses, hyp_max, sum_top_scores)
+        
+        # Forward prop------------------------------------------------------------------------------------XE
+        encoder_out = encoder(imgs)
+        scores, caps_sorted, decode_lengths, alphas, sort_ind = decoder(encoder_out, caps, caplens)
+
+        # Sort gathered results in decreasing order -- corrects for jumbling of using multiple GPUs
+        decode_lengths, decode_sort_ind = decode_lengths.sort(dim=0, descending=True)
+        decode_lengths = decode_lengths.tolist()
+        scores = scores[decode_sort_ind]
+        caps_sorted = caps_sorted[decode_sort_ind]
+        alphas = alphas[decode_sort_ind]
+        sort_ind = sort_ind[decode_sort_ind]
+
+        # Since we decoded starting with <start>, the targets are all words after <start>, up to <end>
+        targets = caps_sorted[:, 1:]
+
+        # Remove timesteps that we didn't decode at, or are pads
+        # pack_padded_sequence is an easy trick to do this
+        scores, _ = pack_padded_sequence(scores, decode_lengths, batch_first=True)
+        targets, _ = pack_padded_sequence(targets, decode_lengths, batch_first=True)
+
+        # Calculate loss
+        loss_xe = criterion_xe(scores, targets)
+
+        # Add doubly stochastic attention regularization
+        loss_xe += alpha_c * ((1. - alphas.sum(dim=1)) ** 2).mean()
+        
+
+        # Back prop.--------------------------------------------------------------------------------------------- XE_RL
+        
+        loss = proportion['xe']* loss_xe + proportion['rl']*loss_rl
+        
+        decoder_optimizer.zero_grad()
+        if encoder_optimizer is not None:
+            encoder_optimizer.zero_grad()
+        loss.backward()
+
+        # Clip gradients
+        if grad_clip is not None:
+            clip_gradient(decoder_optimizer, grad_clip)
+            if encoder_optimizer is not None:
+                clip_gradient(encoder_optimizer, grad_clip)
+
+        # Update weights
+        decoder_optimizer.step()
+        if encoder_optimizer is not None:
+            encoder_optimizer.step()
+
+        # Keep track of metrics
+        
+        losses.update(loss.item(), batch_size)
+       
+        batch_time.update(time.time() - start)
+
+        start = time.time()
+        
+        # Print status
+        if i % print_freq == 0:
+            print('Maximizing sum of Expected Rewards\n'
+                  'Epoch: [{0}][{1}/{2}]\t'
+                  'Batch Time {batch_time.val:.3f} ({batch_time.avg:.3f})\t'
+                  'Data Load Time {data_time.val:.3f} ({data_time.avg:.3f})\t'
+                  'Loss {loss.val:.4f} ({loss.avg:.4f})'.format(epoch, i, len(train_loader),
+                                                                          batch_time=batch_time,
+                                                                          data_time=data_time,
+                                                                          loss=losses))
+        
+        # Free memory.
+        del loss
+        del sum_top_scores
+        del hypotheses
+        del hyp_max
+        gc.collect()     
+        break
 
 def validate(encoder, decoder, reward_function=BLEU_reward):
     """
