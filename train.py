@@ -614,12 +614,14 @@ def train_XE_RL(train_loader, encoder, decoder, criterion_xe, criterion_rl, enco
                                                                           loss=losses))
         
         # Free memory.
+        del loss_xe
+        del loss_rl
         del loss
         del sum_top_scores
         del hypotheses
         del hyp_max
         gc.collect()     
-        break
+        
 
 def validate(encoder, decoder, reward_function=BLEU_reward):
     """
