@@ -357,7 +357,7 @@ class RL_loss(_Loss):
         
         blockPrint() # Avoid verbose print statements
         
-        advantage = self.reward_function(imgs, hypothesis, save_imgs=False, ground_truth=ground_truth, incomplete_inds) - self.reward_function(imgs, hyp_max, save_imgs=False, ground_truth=ground_truth)
+        advantage = self.reward_function(imgs, hypothesis, save_imgs=False, ground_truth=ground_truth, incomplete_inds=incomplete_inds) - self.reward_function(imgs, hyp_max, save_imgs=False, ground_truth=ground_truth)
             
         enablePrint() # Re-enable print functionality
         
