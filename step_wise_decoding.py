@@ -98,4 +98,4 @@ def get_hypothesis_greedy(encoder_out, decoder, sample=False):
         
     hypotheses = [[w for w in se if w not in {word_map['<start>'], word_map['<end>'], word_map['<pad>']}] for se in seqs]
 
-    return (hypotheses, sum_top_scores, alphas)
+    return (hypotheses, sum_top_scores, alphas, incomplete_inds)

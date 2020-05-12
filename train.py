@@ -543,10 +543,10 @@ def train_XE_RL(train_loader, encoder, decoder, criterion_xe, criterion_rl, enco
             # Forward prop.--------------------------------------------------------------------------------- RL
             encoder_out = encoder(imgs)
         
-            (hypotheses, sum_top_scores, alphas) = get_hypothesis_greedy(encoder_out, decoder, sample=True)
-            (hyp_max, _,_) = get_hypothesis_greedy(encoder_out, decoder, sample=False)
+            (hypotheses, sum_top_scores, alphas, incomplete_inds) = get_hypothesis_greedy(encoder_out, decoder, sample=True)
+            (hyp_max, _,_,_) = get_hypothesis_greedy(encoder_out, decoder, sample=False)
             # Calculate loss
-            loss_rl = criterion_rl(imgs, caps, hypotheses, hyp_max, sum_top_scores)
+            loss_rl = criterion_rl(imgs, caps, hypotheses, hyp_max, sum_top_scores, incomplete_inds)
             
             # Add doubly stochastic attention regularization
             loss_rl += alpha_c * ((1. - alphas.sum(dim=1)) ** 2).mean()

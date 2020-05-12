@@ -353,11 +353,11 @@ class RL_loss(_Loss):
         super(RL_loss, self).__init__(size_average=None, reduce=None, reduction='mean')
         self.reward_function = reward_function
 
-    def forward(self, imgs, ground_truth, hypothesis, hyp_max, sum_top_scores):
+    def forward(self, imgs, ground_truth, hypothesis, hyp_max, sum_top_scores, incomplete_inds):
         
         blockPrint() # Avoid verbose print statements
         
-        advantage = self.reward_function(imgs, hypothesis, save_imgs=False, ground_truth=ground_truth) - self.reward_function(imgs, hyp_max, save_imgs=False, ground_truth=ground_truth)
+        advantage = self.reward_function(imgs, hypothesis, save_imgs=False, ground_truth=ground_truth, incomplete_inds) - self.reward_function(imgs, hyp_max, save_imgs=False, ground_truth=ground_truth)
             
         enablePrint() # Re-enable print functionality
         
@@ -463,7 +463,7 @@ def cider_reward(imgs, hypothesis, save_imgs, ground_truth, split='TRAIN'):
         
     return torch.Tensor(cider_rewards).to(device)
     
-def image_comparison_reward(imgs, hypothesis, save_imgs, ground_truth, split='TRAIN'):
+def image_comparison_reward(imgs, hypothesis, save_imgs, ground_truth, split='TRAIN', incomplete_inds=None):
     # Note: Ground truth captions not required.
     # Translate and save the hypothesis as plain text.
     
@@ -507,6 +507,9 @@ def image_comparison_reward(imgs, hypothesis, save_imgs, ground_truth, split='TR
     # compute similarity
     similarity = cos(encoded_original, encoded_recreation)
 
+    if incomplete_inds!=None:
+        similarity[incomplete_inds] = 0.0
+    
     return similarity
 
 def save_images_to_folder(imgs, file_path):
