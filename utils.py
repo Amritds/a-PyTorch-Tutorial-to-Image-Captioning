@@ -353,11 +353,11 @@ class RL_loss(_Loss):
         super(RL_loss, self).__init__(size_average=None, reduce=None, reduction='mean')
         self.reward_function = reward_function
 
-    def forward(self, imgs, ground_truth, hypothesis, hyp_max, sum_top_scores, incomplete_inds):
+    def forward(self, imgs, ground_truth, hypothesis, hyp_max, sum_top_scores, incomplete_inds, incomplete_inds_max):
         
         blockPrint() # Avoid verbose print statements
         
-        advantage = self.reward_function(imgs, hypothesis, save_imgs=False, ground_truth=ground_truth, incomplete_inds=incomplete_inds) - self.reward_function(imgs, hyp_max, save_imgs=False, ground_truth=ground_truth)
+        advantage = self.reward_function(imgs, hypothesis, save_imgs=False, ground_truth=ground_truth, incomplete_inds=incomplete_inds) - self.reward_function(imgs, hyp_max, save_imgs=False, ground_truth=ground_truth, incomplete_inds=incomplete_inds_max)
             
         enablePrint() # Re-enable print functionality
         
