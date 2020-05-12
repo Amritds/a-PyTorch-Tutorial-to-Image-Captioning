@@ -531,108 +531,111 @@ def train_XE_RL(train_loader, encoder, decoder, criterion_xe, criterion_rl, enco
 
     # Batches
     for i, (imgs, caps, caplens) in enumerate(train_loader):
-    
-        data_time.update(time.time() - start)
+        try:
+            data_time.update(time.time() - start)
 
-        # Move to GPU, if available
-        imgs = imgs.to(device)
-        caps = caps.to(device)
-        caplens = caplens.to(device)
+            # Move to GPU, if available
+            imgs = imgs.to(device)
+            caps = caps.to(device)
+            caplens = caplens.to(device)
             
-        if proportion['rl']!=0:
-            # Forward prop.--------------------------------------------------------------------------------- RL
-            encoder_out = encoder(imgs)
+            if proportion['rl']!=0:
+                # Forward prop.--------------------------------------------------------------------------------- RL
+                encoder_out = encoder(imgs)
         
-            (hypotheses, sum_top_scores, alphas, incomplete_inds) = get_hypothesis_greedy(encoder_out, decoder, sample=True)
-            (hyp_max, _,_,_) = get_hypothesis_greedy(encoder_out, decoder, sample=False)
-            # Calculate loss
-            loss_rl = criterion_rl(imgs, caps, hypotheses, hyp_max, sum_top_scores, incomplete_inds)
+                (hypotheses, sum_top_scores, alphas, incomplete_inds) = get_hypothesis_greedy(encoder_out, decoder, sample=True)
+                (hyp_max, _,_,_) = get_hypothesis_greedy(encoder_out, decoder, sample=False)
+                # Calculate loss
+                loss_rl = criterion_rl(imgs, caps, hypotheses, hyp_max, sum_top_scores, incomplete_inds)
             
-            # Add doubly stochastic attention regularization
-            loss_rl += alpha_c * ((1. - alphas.sum(dim=1)) ** 2).mean()
+                # Add doubly stochastic attention regularization
+                loss_rl += alpha_c * ((1. - alphas.sum(dim=1)) ** 2).mean()
             
-        else:
-            loss_rl = 0
+            else:
+                loss_rl = 0
             
         
-        if proportion['xe']!=0:
-            # Forward prop------------------------------------------------------------------------------------XE
-            encoder_out = encoder(imgs)
-            scores, caps_sorted, decode_lengths, alphas, sort_ind = decoder(encoder_out, caps, caplens)
+            if proportion['xe']!=0:
+                # Forward prop------------------------------------------------------------------------------------XE
+                encoder_out = encoder(imgs)
+                scores, caps_sorted, decode_lengths, alphas, sort_ind = decoder(encoder_out, caps, caplens)
 
-            # Sort gathered results in decreasing order -- corrects for jumbling of using multiple GPUs
-            decode_lengths, decode_sort_ind = decode_lengths.sort(dim=0, descending=True)
-            decode_lengths = decode_lengths.tolist()
-            scores = scores[decode_sort_ind]
-            caps_sorted = caps_sorted[decode_sort_ind]
-            alphas = alphas[decode_sort_ind]
-            sort_ind = sort_ind[decode_sort_ind]
+                # Sort gathered results in decreasing order -- corrects for jumbling of using multiple GPUs
+                decode_lengths, decode_sort_ind = decode_lengths.sort(dim=0, descending=True)
+                decode_lengths = decode_lengths.tolist()
+                scores = scores[decode_sort_ind]
+                caps_sorted = caps_sorted[decode_sort_ind]
+                alphas = alphas[decode_sort_ind]
+                sort_ind = sort_ind[decode_sort_ind]
 
-            # Since we decoded starting with <start>, the targets are all words after <start>, up to <end>
-            targets = caps_sorted[:, 1:]
+                # Since we decoded starting with <start>, the targets are all words after <start>, up to <end>
+                targets = caps_sorted[:, 1:]
 
-            # Remove timesteps that we didn't decode at, or are pads
-            # pack_padded_sequence is an easy trick to do this
-            scores, _ = pack_padded_sequence(scores, decode_lengths, batch_first=True)
-            targets, _ = pack_padded_sequence(targets, decode_lengths, batch_first=True)
+                # Remove timesteps that we didn't decode at, or are pads
+                # pack_padded_sequence is an easy trick to do this
+                scores, _ = pack_padded_sequence(scores, decode_lengths, batch_first=True)
+                targets, _ = pack_padded_sequence(targets, decode_lengths, batch_first=True)
 
-            # Calculate loss
-            loss_xe = criterion_xe(scores, targets)
+                # Calculate loss
+                loss_xe = criterion_xe(scores, targets)
 
-            # Add doubly stochastic attention regularization
-            loss_xe += alpha_c * ((1. - alphas.sum(dim=1)) ** 2).mean()
-        else:
-            loss_xe = 0
+                # Add doubly stochastic attention regularization
+                loss_xe += alpha_c * ((1. - alphas.sum(dim=1)) ** 2).mean()
+            else:
+                loss_xe = 0
         
 
-        # Back prop.--------------------------------------------------------------------------------------------- XE_RL
+            # Back prop.--------------------------------------------------------------------------------------------- XE_RL
         
-        loss = (proportion['xe']* loss_xe + proportion['rl']*loss_rl)/ (proportion['xe']+proportion['rl'])
+            loss = (proportion['xe']* loss_xe + proportion['rl']*loss_rl)/ (proportion['xe']+proportion['rl'])
         
-        decoder_optimizer.zero_grad()
-        if encoder_optimizer is not None:
-            encoder_optimizer.zero_grad()
-        loss.backward()
-
-        # Clip gradients
-        if grad_clip is not None:
-            clip_gradient(decoder_optimizer, grad_clip)
+            decoder_optimizer.zero_grad()
             if encoder_optimizer is not None:
-                clip_gradient(encoder_optimizer, grad_clip)
+                encoder_optimizer.zero_grad()
+            loss.backward()
 
-        # Update weights
-        decoder_optimizer.step()
-        if encoder_optimizer is not None:
-            encoder_optimizer.step()
+            # Clip gradients
+            if grad_clip is not None:
+                clip_gradient(decoder_optimizer, grad_clip)
+                if encoder_optimizer is not None:
+                    clip_gradient(encoder_optimizer, grad_clip)
 
-        # Keep track of metrics
+            # Update weights
+            decoder_optimizer.step()
+            if encoder_optimizer is not None:
+                encoder_optimizer.step()
+
+            # Keep track of metrics
         
-        losses.update(loss.item(), batch_size)
+            losses.update(loss.item(), batch_size)
        
-        batch_time.update(time.time() - start)
+            batch_time.update(time.time() - start)
 
-        start = time.time()
+            start = time.time()
         
-        # Print status
-        if i % print_freq == 0:
-            print('Maximizing sum of Expected Rewards\n'
-                  'Epoch: [{0}][{1}/{2}]\t'
-                  'Batch Time {batch_time.val:.3f} ({batch_time.avg:.3f})\t'
-                  'Data Load Time {data_time.val:.3f} ({data_time.avg:.3f})\t'
-                  'Loss {loss.val:.4f} ({loss.avg:.4f})'.format(epoch, i, len(train_loader),
-                                                                          batch_time=batch_time,
-                                                                          data_time=data_time,
-                                                                          loss=losses))
+            # Print status
+            if i % print_freq == 0:
+                print('Maximizing sum of Expected Rewards\n'
+                      'Epoch: [{0}][{1}/{2}]\t'
+                      'Batch Time {batch_time.val:.3f} ({batch_time.avg:.3f})\t'
+                      'Data Load Time {data_time.val:.3f} ({data_time.avg:.3f})\t'
+                      'Loss {loss.val:.4f} ({loss.avg:.4f})'.format(epoch, i, len(train_loader),
+                                                                              batch_time=batch_time,
+                                                                              data_time=data_time,
+                                                                              loss=losses))
         
-        # Free memory.
-        del loss_xe
-        del loss_rl
-        del loss
-        del sum_top_scores
-        del hypotheses
-        del hyp_max
-        gc.collect()     
+            # Free memory.
+            del loss_xe
+            del loss_rl
+            del loss
+            del sum_top_scores
+            del hypotheses
+            del hyp_max
+            gc.collect()     
         
+        except:
+            print('Batch failed...')
+            
 
 def validate(encoder, decoder, reward_function=BLEU_reward):
     """
