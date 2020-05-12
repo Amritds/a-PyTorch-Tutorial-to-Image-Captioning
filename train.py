@@ -538,40 +538,51 @@ def train_XE_RL(train_loader, encoder, decoder, criterion_xe, criterion_rl, enco
         imgs = imgs.to(device)
         caps = caps.to(device)
         caplens = caplens.to(device)
-
-        # Forward prop.--------------------------------------------------------------------------------- RL
-        encoder_out = encoder(imgs)
+            
+        if proportion['rl']!=0:
+            # Forward prop.--------------------------------------------------------------------------------- RL
+            encoder_out = encoder(imgs)
         
-        (hypotheses, sum_top_scores) = get_hypothesis_greedy(encoder_out, decoder, sample=True)
-        (hyp_max, _) = get_hypothesis_greedy(encoder_out, decoder, sample=False)
-        # Calculate loss
-        loss_rl = criterion_rl(imgs, caps, hypotheses, hyp_max, sum_top_scores)
+            (hypotheses, sum_top_scores, alphas) = get_hypothesis_greedy(encoder_out, decoder, sample=True)
+            (hyp_max, _,_) = get_hypothesis_greedy(encoder_out, decoder, sample=False)
+            # Calculate loss
+            loss_rl = criterion_rl(imgs, caps, hypotheses, hyp_max, sum_top_scores)
+            
+            # Add doubly stochastic attention regularization
+            loss_rl += alpha_c * ((1. - alphas.sum(dim=1)) ** 2).mean()
+            
+        else:
+            loss_rl = 0
+            
         
-        # Forward prop------------------------------------------------------------------------------------XE
-        encoder_out = encoder(imgs)
-        scores, caps_sorted, decode_lengths, alphas, sort_ind = decoder(encoder_out, caps, caplens)
+        if proportion['xe']!=0:
+            # Forward prop------------------------------------------------------------------------------------XE
+            encoder_out = encoder(imgs)
+            scores, caps_sorted, decode_lengths, alphas, sort_ind = decoder(encoder_out, caps, caplens)
 
-        # Sort gathered results in decreasing order -- corrects for jumbling of using multiple GPUs
-        decode_lengths, decode_sort_ind = decode_lengths.sort(dim=0, descending=True)
-        decode_lengths = decode_lengths.tolist()
-        scores = scores[decode_sort_ind]
-        caps_sorted = caps_sorted[decode_sort_ind]
-        alphas = alphas[decode_sort_ind]
-        sort_ind = sort_ind[decode_sort_ind]
+            # Sort gathered results in decreasing order -- corrects for jumbling of using multiple GPUs
+            decode_lengths, decode_sort_ind = decode_lengths.sort(dim=0, descending=True)
+            decode_lengths = decode_lengths.tolist()
+            scores = scores[decode_sort_ind]
+            caps_sorted = caps_sorted[decode_sort_ind]
+            alphas = alphas[decode_sort_ind]
+            sort_ind = sort_ind[decode_sort_ind]
 
-        # Since we decoded starting with <start>, the targets are all words after <start>, up to <end>
-        targets = caps_sorted[:, 1:]
+            # Since we decoded starting with <start>, the targets are all words after <start>, up to <end>
+            targets = caps_sorted[:, 1:]
 
-        # Remove timesteps that we didn't decode at, or are pads
-        # pack_padded_sequence is an easy trick to do this
-        scores, _ = pack_padded_sequence(scores, decode_lengths, batch_first=True)
-        targets, _ = pack_padded_sequence(targets, decode_lengths, batch_first=True)
+            # Remove timesteps that we didn't decode at, or are pads
+            # pack_padded_sequence is an easy trick to do this
+            scores, _ = pack_padded_sequence(scores, decode_lengths, batch_first=True)
+            targets, _ = pack_padded_sequence(targets, decode_lengths, batch_first=True)
 
-        # Calculate loss
-        loss_xe = criterion_xe(scores, targets)
+            # Calculate loss
+            loss_xe = criterion_xe(scores, targets)
 
-        # Add doubly stochastic attention regularization
-        loss_xe += alpha_c * ((1. - alphas.sum(dim=1)) ** 2).mean()
+            # Add doubly stochastic attention regularization
+            loss_xe += alpha_c * ((1. - alphas.sum(dim=1)) ** 2).mean()
+        else:
+            loss_xe = 0
         
 
         # Back prop.--------------------------------------------------------------------------------------------- XE_RL

@@ -36,7 +36,7 @@ def get_hypothesis_greedy(encoder_out, decoder, sample=False):
     seqs = prev_words.tolist()  # (batch_size, 1)
 
     # Start decoding
-    step = 1
+    step = 0
     H, C = decoder.init_hidden_state(encoder_out)
 
     # Keep track of sum top scores for the REINFORCE algorithm.
@@ -46,13 +46,14 @@ def get_hypothesis_greedy(encoder_out, decoder, sample=False):
     # Update the indexes of sequences that are incomplete.    
     incomplete_inds = [ind for ind, last_word in enumerate(prev_words.squeeze(1).tolist()) if last_word != word_map['<end>']]
     
+    alphas = torch.zeros(batch_size, 100, num_pixels).to(device)
     
     # Note: Batch size changes as generated sequences come to an <end>. 
     while len(incomplete_inds)>0:
 
         embeddings = decoder.embedding(prev_words[incomplete_inds]).squeeze(1)  # (batch_size, embed_dim)
 
-        awe, _ = decoder.attention(encoder_out[incomplete_inds], H[incomplete_inds])  # (batch_size, encoder_dim), (batch_size, num_pixels)
+        awe, alpha = decoder.attention(encoder_out[incomplete_inds], H[incomplete_inds])  # (batch_size, encoder_dim), (batch_size, num_pixels)
 
         gate = decoder.sigmoid(decoder.f_beta(H[incomplete_inds]))  # gating scalar, (batch_size, encoder_dim)
         awe = gate * awe
@@ -85,6 +86,7 @@ def get_hypothesis_greedy(encoder_out, decoder, sample=False):
         sum_top_scores[incomplete_inds] += top_scores # Keep track of sum top scores for the REINFORCE algorithm.
         
         # Update the indexes of sequences that are incomplete.
+        alphas[incomplete_inds, step, :] = alpha
         
         incomplete_inds = [ind for ind, last_word in enumerate(prev_words.squeeze(1).tolist()) if last_word != word_map['<end>']]
         
@@ -96,4 +98,4 @@ def get_hypothesis_greedy(encoder_out, decoder, sample=False):
         
     hypotheses = [[w for w in se if w not in {word_map['<start>'], word_map['<end>'], word_map['<pad>']}] for se in seqs]
 
-    return (hypotheses, sum_top_scores)
+    return (hypotheses, sum_top_scores, alphas)
