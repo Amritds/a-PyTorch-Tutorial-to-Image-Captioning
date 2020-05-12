@@ -16,7 +16,7 @@ from random import seed, choice, sample
 from models import ComparisonEncoder
 import torchvision
 from nltk.translate.bleu_score import sentence_bleu
-from StackGAN.code.main_sampler import sample as image_generator
+from AttnGAN.code.main_sampler import main_sampler as image_generator
 import yaml
 import scipy
 
@@ -481,16 +481,18 @@ def image_comparison_reward(imgs, hypothesis, save_imgs, ground_truth, split='TR
     
     
     # Save the minibatch sentences.
-    minibatch_words_path = os.path.join(exp_dir, 'mini_batch_captions.txt')
-    with open(minibatch_words_path, 'w') as f:
-        for sent in sentences:
-            f.write(sent + '\n')
+    if save_imgs:
+        minibatch_words_path = os.path.join(exp_dir, 'mini_batch_captions.txt')
+        with open(minibatch_words_path, 'w') as f:
+            for sent in sentences:
+                f.write(sent + '\n')
 
     # Get encoding (saved as a torchfile)
-    requests.get('http://0.0.0.0:8080/' + '?path='+exp_dir)
+    #requests.get('http://0.0.0.0:8080/' + '?path='+exp_dir)
     
     # Generate images from encoded minbatch (saved to file), convert to tensor, scale and normalize.
-    recreated_imgs = (image_generator(exp_dir))
+    #recreated_imgs = (image_generator(exp_dir))
+    recreated_imgs = (image_generator(sentences))
     recreated_imgs = torch.Tensor(recreated_imgs).to(device).permute(0,3,1,2)
     recreated_imgs = normalize(recreated_imgs/torch.max(recreated_imgs))
     
