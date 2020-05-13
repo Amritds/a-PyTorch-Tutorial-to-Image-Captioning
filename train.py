@@ -632,9 +632,11 @@ def train_XE_RL(train_loader, encoder, decoder, criterion_xe, criterion_rl, enco
             del hypotheses
             del hyp_max
             gc.collect()     
+            break
         
         except:
             print('Batch failed...')
+        
             
 
 def validate(encoder, decoder, reward_function=BLEU_reward):
