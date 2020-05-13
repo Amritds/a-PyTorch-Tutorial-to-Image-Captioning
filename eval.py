@@ -105,10 +105,10 @@ def evaluate(beam_size, encoder, decoder, reward_function):
         
         assert len(references) == len(hypothesis)
 
-        if (i+1)%32 == 0:
+        if (i+1)%16 == 0:
             img_batch = torch.cat(image_buffer).to(device)
             blockPrint()
-            regeneration_reward.append(reward_function(img_batch, hypothesis[-32:], save_imgs=batch_only, ground_truth=[sentences[0] for sentences in references[-32:]],split='VAL'))
+            regeneration_reward.append(reward_function(img_batch, hypothesis[-16:], save_imgs=batch_only, ground_truth=[sentences[0] for sentences in references[-16:]],split='VAL'))
             enablePrint()
             image_buffer = list()
             if batch_only:
