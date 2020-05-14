@@ -254,12 +254,14 @@ def training_epochs(encoder, decoder, encoder_optimizer, decoder_optimizer, trai
                         proportion=proportion)
 
         #-------------------------------------------------------------------------------------------------
-
-            # One epoch's validation (Computes average reward for the epoch)
-            _, recent_reward = validate(encoder=encoder,
-                                        decoder=decoder,
-                                        reward_function=reward_function)
-            
+           try:
+                # One epoch's validation (Computes average reward for the epoch)
+                _, recent_reward = validate(encoder=encoder,
+                                            decoder=decoder,
+                                            reward_function=reward_function)
+            except:
+                print('Validation failed')
+                recent_reward = -1
                 
             # Check if there was an improvement 
             is_best = recent_reward > best_reward
@@ -302,12 +304,14 @@ def training_epochs(encoder, decoder, encoder_optimizer, decoder_optimizer, trai
                      epoch=epoch)
 
         #-------------------------------------------------------------------------------------------------
-
-            # One epoch's validation (Computes average reward for the epoch)
-            _, recent_reward = validate(encoder=encoder,
-                                        decoder=decoder,
-                                        reward_function=reward_function)
-            
+            try:
+                # One epoch's validation (Computes average reward for the epoch)
+                _, recent_reward = validate(encoder=encoder,
+                                            decoder=decoder,
+                                            reward_function=reward_function)
+            except:
+                print('Validation failed')
+                recent_reward = -1
                 
             # Check if there was an improvement 
             is_best = recent_reward > best_reward
