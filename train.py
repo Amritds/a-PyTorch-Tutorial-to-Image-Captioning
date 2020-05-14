@@ -254,7 +254,7 @@ def training_epochs(encoder, decoder, encoder_optimizer, decoder_optimizer, trai
                         proportion=proportion)
 
         #-------------------------------------------------------------------------------------------------
-           try:
+            try:
                 # One epoch's validation (Computes average reward for the epoch)
                 _, recent_reward = validate(encoder=encoder,
                                             decoder=decoder,
